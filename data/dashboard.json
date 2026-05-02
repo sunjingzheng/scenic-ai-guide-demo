@@ -1,0 +1,166 @@
+{
+  "metrics": [
+    {
+      "label": "资料样本服务人次",
+      "value": "777",
+      "trend": "来自灵山/拈花湾相关样本"
+    },
+    {
+      "label": "平均停留时长",
+      "value": "4.0h",
+      "trend": "可辅助讲解节奏设计"
+    },
+    {
+      "label": "平均满意度",
+      "value": "3.07",
+      "trend": "仍有提升空间"
+    },
+    {
+      "label": "知识库景点数",
+      "value": "22",
+      "trend": "覆盖灵山胜境与拈花湾"
+    }
+  ],
+  "satisfactionTrend": [
+    {
+      "month": "2025-05",
+      "visitors": 91,
+      "satisfaction": 3.08
+    },
+    {
+      "month": "2025-06",
+      "visitors": 65,
+      "satisfaction": 3.05
+    },
+    {
+      "month": "2025-07",
+      "visitors": 71,
+      "satisfaction": 3.13
+    },
+    {
+      "month": "2025-08",
+      "visitors": 91,
+      "satisfaction": 3.05
+    },
+    {
+      "month": "2025-09",
+      "visitors": 105,
+      "satisfaction": 2.98
+    },
+    {
+      "month": "2025-10",
+      "visitors": 48,
+      "satisfaction": 3.17
+    },
+    {
+      "month": "2025-11",
+      "visitors": 49,
+      "satisfaction": 3.24
+    },
+    {
+      "month": "2025-12",
+      "visitors": 85,
+      "satisfaction": 3.08
+    }
+  ],
+  "hotSpots": [
+    {
+      "name": "灵山大佛",
+      "count": 286
+    },
+    {
+      "name": "禅意小镇·拈花湾",
+      "count": 255
+    },
+    {
+      "name": "灵山胜境",
+      "count": 236
+    }
+  ],
+  "focusPoints": [
+    {
+      "name": "历史文化",
+      "value": 777
+    },
+    {
+      "name": "祈福体验",
+      "value": 777
+    },
+    {
+      "name": "自然风光",
+      "value": 777
+    },
+    {
+      "name": "夜游休闲",
+      "value": 777
+    },
+    {
+      "name": "亲子互动",
+      "value": 541
+    }
+  ],
+  "sentiment": [
+    {
+      "name": "积极",
+      "value": 174
+    },
+    {
+      "name": "中性",
+      "value": 469
+    },
+    {
+      "name": "需关注",
+      "value": 134
+    }
+  ],
+  "costBreakdown": [
+    {
+      "name": "门票",
+      "value": 20.2
+    },
+    {
+      "name": "餐饮",
+      "value": 26.3
+    },
+    {
+      "name": "文创购物",
+      "value": 27.2
+    },
+    {
+      "name": "交通",
+      "value": 14.6
+    },
+    {
+      "name": "演艺体验",
+      "value": 11.7
+    }
+  ],
+  "hotQuestions": [
+    {
+      "question": "灵山大佛有什么文化意义？",
+      "count": 186
+    },
+    {
+      "question": "九龙灌浴几点开放？",
+      "count": 152
+    },
+    {
+      "question": "拈花湾夜游路线怎么安排？",
+      "count": 139
+    },
+    {
+      "question": "亲子游客适合哪些景点？",
+      "count": 118
+    },
+    {
+      "question": "从入口到梵宫怎么走？",
+      "count": 97
+    }
+  ],
+  "suggestions": [
+    "强化灵山大佛、九龙灌浴、梵宫三类高频问题的标准答案与语音讲解素材。",
+    "针对满意度低于 3 分的游客，可在离园前推送休息点、交通和演艺时间提醒。",
+    "拈花湾夜游关注度较高，建议数字人提供夜间灯光秀、餐饮和返程交通组合推荐。",
+    "亲子互动标签样本较少，可在后台补充研学任务、盖章打卡和无障碍路线说明。"
+  ]
+}
