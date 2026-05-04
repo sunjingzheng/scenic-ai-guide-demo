@@ -38,8 +38,8 @@ export const useGuideStore = defineStore('guide', () => {
     culturalTheme: '太湖禅境',
     voiceEnabled: true,
     voiceSpeed: 1.02,
-    ttsSpeaker: 'xiaoxiao',
-    ttsLanguage: 'Auto',
+    ttsSpeaker: 'zero-shot',
+    ttsLanguage: 'zh',
     preferLocalTTS: false,
     live2d: {
       enabled: true,
@@ -80,12 +80,13 @@ export const useGuideStore = defineStore('guide', () => {
   }
 
   async function loadTTSConfig() {
-    ttsConfig.value = await api.getTTSConfig()
+    const config = await api.getTTSConfig() as TTSConfig
+    ttsConfig.value = config
     avatarConfig.value = {
       ...avatarConfig.value,
-      ttsSpeaker: ttsConfig.value.speaker,
-      ttsLanguage: ttsConfig.value.language,
-      preferLocalTTS: ttsConfig.value.enabled
+      ttsSpeaker: config.speaker,
+      ttsLanguage: config.language,
+      preferLocalTTS: config.enabled
     }
   }
 
@@ -139,7 +140,8 @@ export const useGuideStore = defineStore('guide', () => {
         language: avatarConfig.value.ttsLanguage,
         rate: avatarConfig.value.voiceSpeed,
         pitch: avatarConfig.value.voice.includes('女声') ? 1.12 : 0.92,
-        preferLocalTTS: avatarConfig.value.preferLocalTTS
+        preferLocalTTS: avatarConfig.value.preferLocalTTS,
+        ttsConfig: ttsConfig.value
       })
     } finally {
       speaking.value = false

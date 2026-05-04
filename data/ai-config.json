@@ -1,0 +1,26 @@
+{
+  "activeProvider": "local_rag",
+  "contextWindowRounds": 6,
+  "providers": {
+    "local_rag": {
+      "type": "openai-compatible",
+      "name": "本地 JSON 知识库",
+      "baseUrl": "",
+      "apiKey": "",
+      "model": "json-rag",
+      "maxTokens": 1024,
+      "temperature": 0.65,
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
+    },
+    "openai_compatible": {
+      "type": "openai-compatible",
+      "name": "OpenAI Compatible",
+      "baseUrl": "",
+      "apiKey": "",
+      "model": "gpt-4o-mini",
+      "maxTokens": 1024,
+      "temperature": 0.7,
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
+    }
+  }
+}

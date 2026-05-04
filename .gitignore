@@ -12,13 +12,10 @@ yarn-error.log*
 pnpm-debug.log*
 web.out.log
 web.err.log
-server.out.log
-server.err.log
 
 # Environment files
 .env
 .env.*
-!.env.example
 
 # Editor and OS files
 .DS_Store

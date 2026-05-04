@@ -1,0 +1,29 @@
+{
+  "_comment": "GPT-SoVITS V2ProPlus zero-shot 配置。没有配置前保持 enabled=false，项目会使用浏览器语音。",
+  "enabled": false,
+  "provider": "gpt-sovits-v2-pro-plus",
+  "baseUrl": "http://localhost:9880",
+  "apiPath": "/tts",
+  "speaker": "zero-shot",
+  "language": "zh",
+  "gptSoVits": {
+    "_comment": "refAudioPath 建议填 GPT-SoVITS 服务能访问到的绝对路径；promptText 必须和参考音频内容尽量一字不差。",
+    "textLang": "zh",
+    "promptLang": "zh",
+    "refAudioPath": "/absolute/path/to/reference.wav",
+    "promptText": "这里填写参考音频里一字不差的文字。",
+    "textSplitMethod": "cut5",
+    "batchSize": 1,
+    "mediaType": "wav",
+    "streamingMode": false,
+    "speedFactor": 1,
+    "topK": 15,
+    "topP": 1,
+    "temperature": 1,
+    "sampleSteps": 32,
+    "ifSr": false,
+    "parallelInfer": true,
+    "repetitionPenalty": 1.35,
+    "auxRefAudioPaths": []
+  }
+}

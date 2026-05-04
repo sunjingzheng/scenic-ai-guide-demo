@@ -58,9 +58,30 @@ export type RuntimeAIConfig = {
 
 export type TTSConfig = {
   enabled: boolean
+  provider?: string
   baseUrl: string
+  apiPath?: string
   speaker: string
   language: string
+  gptSoVits?: {
+    textLang: string
+    promptLang: string
+    refAudioPath: string
+    promptText: string
+    textSplitMethod?: string
+    batchSize?: number
+    mediaType?: string
+    streamingMode?: boolean
+    speedFactor?: number
+    topK?: number
+    topP?: number
+    temperature?: number
+    sampleSteps?: number
+    ifSr?: boolean
+    parallelInfer?: boolean
+    repetitionPenalty?: number
+    auxRefAudioPaths?: string[]
+  }
 }
 
 export type TTSStatus = {

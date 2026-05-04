@@ -241,12 +241,12 @@ function resetLive2D() {
 
         <!-- TTS 服务 -->
         <div v-if="ttsForm" class="section-card">
-          <h3>本地 TTS（可选）</h3>
+          <h3>GPT-SoVITS TTS（可选）</h3>
 
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" v-model="ttsForm.enabled" />
-              <span>使用本地 TTS 生成音频并驱动口型</span>
+              <span>使用 GPT-SoVITS V2ProPlus zero-shot 生成音频并驱动口型</span>
             </label>
           </div>
 
@@ -256,13 +256,13 @@ function resetLive2D() {
           </div>
 
           <div v-if="ttsForm.enabled" class="form-group">
-            <label>音色 / Speaker</label>
-            <input v-model="ttsForm.speaker" class="input" placeholder="xiaoxiao" />
+            <label>音色标记</label>
+            <input v-model="ttsForm.speaker" class="input" placeholder="zero-shot" />
           </div>
 
           <div v-if="ttsForm.enabled" class="form-group">
-            <label>语言</label>
-            <input v-model="ttsForm.language" class="input" placeholder="Auto" />
+            <label>合成语言</label>
+            <input v-model="ttsForm.language" class="input" placeholder="zh" />
           </div>
         </div>
 
@@ -296,7 +296,7 @@ function resetLive2D() {
                 class="input"
                 type="password"
                 autocomplete="off"
-                placeholder="仅保存在本地 mock-server 内存中"
+                placeholder="仅保存在当前浏览器 localStorage 中"
               />
             </div>
 

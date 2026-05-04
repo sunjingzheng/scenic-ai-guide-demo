@@ -1,3 +1,6 @@
+import { requestGptSoVitsTTS } from '../api/tts'
+import type { TTSConfig } from '../types'
+
 let playGeneration = 0
 
 const RE_EMOJI = /\p{Extended_Pictographic}[\u{FE0F}\u{FE0E}\u{200D}\u{20E3}\p{Extended_Pictographic}]*/gu
@@ -100,26 +103,16 @@ function speakWithBrowser(text: string, rate = 1.02, pitch = 1.08) {
   })
 }
 
-async function requestTTS(text: string, speaker: string, language: string) {
-  const response = await fetch('/api/tts/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, speaker, language })
-  })
-
-  if (!response.ok) {
-    throw new Error(`TTS 服务不可用：${response.status}`)
-  }
-
-  return {
-    buffer: await response.arrayBuffer(),
-    contentType: response.headers.get('Content-Type') || 'audio/mpeg'
-  }
-}
-
 export async function playGuideTTS(
   text: string,
-  options: { speaker?: string; language?: string; rate?: number; pitch?: number; preferLocalTTS?: boolean } = {}
+  options: {
+    speaker?: string
+    language?: string
+    rate?: number
+    pitch?: number
+    preferLocalTTS?: boolean
+    ttsConfig?: TTSConfig | null
+  } = {}
 ) {
   const cleaned = cleanForTTS(text)
   if (!cleaned) return
@@ -127,11 +120,9 @@ export async function playGuideTTS(
   const gen = ++playGeneration
   stopLive2DAudio()
 
-  if (options.preferLocalTTS !== false) {
+  if (options.preferLocalTTS !== false && options.ttsConfig?.enabled) {
     const sentences = splitSentences(cleaned)
-    const requests = sentences.map((sentence) =>
-      requestTTS(sentence, options.speaker || 'xiaoxiao', options.language || 'Auto')
-    )
+    const requests = sentences.map((sentence) => requestGptSoVitsTTS(sentence, options.ttsConfig as TTSConfig))
 
     try {
       for (let i = 0; i < requests.length; i += 1) {
