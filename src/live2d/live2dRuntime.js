@@ -1,4 +1,13 @@
-import { LAppDelegate } from 'D:/工作项目/挑战杯/ai-live2d-go/src/lappdelegate.ts'
-import * as LAppDefine from 'D:/工作项目/挑战杯/ai-live2d-go/src/lappdefine.ts'
+const live2dUnavailableMessage =
+  'Live2D runtime is not bundled with this demo. The app will use the built-in fallback avatar.'
 
-export { LAppDelegate, LAppDefine }
+export const LAppDefine = {
+  PriorityNormal: 1,
+  setResourcesPath() {}
+}
+
+export const LAppDelegate = {
+  getInstance() {
+    throw new Error(live2dUnavailableMessage)
+  }
+}

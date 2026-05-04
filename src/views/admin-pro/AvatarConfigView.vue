@@ -179,7 +179,7 @@ function previewVoice() {
 
           <div class="form-group">
             <label>服务地址</label>
-            <input v-model="ttsForm.baseUrl" class="input" placeholder="http://127.0.0.1:9880" />
+            <input v-model="ttsForm.baseUrl" class="input" placeholder="http://localhost:9880" />
           </div>
 
           <div class="form-group">

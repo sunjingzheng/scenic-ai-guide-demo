@@ -3,11 +3,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import mammoth from 'mammoth'
 import XLSX from 'xlsx'
+import { loadEnv } from './load-env.mjs'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+loadEnv(rootDir)
+
 const dataDir = path.join(rootDir, 'data')
-const defaultPackDir = "C:\\Users\\sun'jing'zheng\\Desktop\\示范景区公开资料包"
-const packDir = process.env.DATA_PACK_DIR || defaultPackDir
+const defaultPackDir = path.join(rootDir, 'source-data')
+const packDir = path.resolve(rootDir, process.env.DATA_PACK_DIR || defaultPackDir)
 
 const structuredDoc = path.join(packDir, '灵山胜境 景点结构化数据集.docx')
 const behaviorXlsx = path.join(packDir, '景点景区旅游数据行为分析数据.xlsx')
@@ -39,6 +42,20 @@ const enrichment = {
 function compact(text, limit = 420) {
   const value = String(text || '').replace(/\s+/g, ' ').trim()
   return value.length > limit ? `${value.slice(0, limit)}...` : value
+}
+
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function displayPath(filePath) {
+  const relative = path.relative(rootDir, filePath)
+  return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? `./${relative}` : filePath
 }
 
 function tagSpot(spot) {
@@ -208,6 +225,22 @@ function parseBehavior() {
 
 async function main() {
   await fs.mkdir(dataDir, { recursive: true })
+
+  const hasSourceFiles = (await fileExists(structuredDoc)) && (await fileExists(behaviorXlsx))
+  if (!hasSourceFiles) {
+    const hasPreparedData =
+      (await fileExists(path.join(dataDir, 'spots.json'))) &&
+      (await fileExists(path.join(dataDir, 'dashboard.json')))
+
+    if (hasPreparedData) {
+      console.warn(`Data pack not found at ${displayPath(packDir)}`)
+      console.warn('Keeping the existing sample data in data/. Set DATA_PACK_DIR to regenerate it.')
+      return
+    }
+
+    throw new Error(`Data pack not found at ${displayPath(packDir)}. Set DATA_PACK_DIR to the source data package directory.`)
+  }
+
   const spots = await parseSpots()
   const dashboard = parseBehavior()
   dashboard.metrics[3].value = String(spots.length)

@@ -3,10 +3,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cors from 'cors'
 import express from 'express'
+import { loadEnv } from '../scripts/load-env.mjs'
+
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+loadEnv(rootDir)
 
 const app = express()
 const port = Number(process.env.PORT || 8787)
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const host = process.env.HOST || 'localhost'
 const dataDir = path.join(rootDir, 'data')
 
 app.use(cors())
@@ -48,7 +52,7 @@ if (process.env.LLM_BASE_URL && process.env.LLM_API_KEY) {
 
 let ttsConfig = {
   enabled: String(process.env.TTS_ENABLED || 'true') !== 'false',
-  baseUrl: process.env.TTS_URL || 'http://127.0.0.1:9880',
+  baseUrl: process.env.TTS_URL || 'http://localhost:9880',
   speaker: process.env.TTS_SPEAKER || 'xiaoxiao',
   language: process.env.TTS_LANGUAGE || 'Auto'
 }
@@ -421,6 +425,6 @@ app.post('/api/avatar/config', (req, res) => {
   res.json({ ok: true, config: avatarConfig })
 })
 
-app.listen(port, () => {
-  console.log(`Mock API server running at http://localhost:${port}`)
+app.listen(port, host, () => {
+  console.log(`Mock API server running at http://${host}:${port}`)
 })

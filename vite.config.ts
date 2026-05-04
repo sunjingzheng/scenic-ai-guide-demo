@@ -1,25 +1,19 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const live2dProjectRoot = 'D:/工作项目/挑战杯/ai-live2d-go'
-const live2dSourceRoot = `${live2dProjectRoot}/src`
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiHost = process.env.API_HOST || process.env.HOST || env.API_HOST || env.HOST || 'localhost'
+  const apiPort = process.env.API_PORT || process.env.PORT || env.API_PORT || env.PORT || '8787'
 
-export default defineConfig({
-  plugins: [vue()],
-  publicDir: `${live2dProjectRoot}/public`,
-  resolve: {
-    alias: {
-      '@framework': `${live2dSourceRoot}/framework`
-    }
-  },
-  server: {
-    fs: {
-      allow: ['D:/code/scenic-ai-guide-demo', live2dProjectRoot]
-    },
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8787',
-        changeOrigin: true
+  return {
+    plugins: [vue()],
+    server: {
+      proxy: {
+        '/api': {
+          target: `http://${apiHost}:${apiPort}`,
+          changeOrigin: true
+        }
       }
     }
   }

@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5173",
+    "dev": "vite --port 5173",
     "server": "node mock-server/server.mjs",
     "dev:all": "concurrently -n API,WEB -c cyan,green \"npm run server\" \"npm run dev\"",
     "prepare:data": "node scripts/prepare-data.mjs",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4173"
+    "preview": "vite preview --port 4173"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

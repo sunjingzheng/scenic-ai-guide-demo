@@ -16,8 +16,8 @@ let animationTimer: number | undefined
 let LAppDelegate: any
 let LAppDefine: any
 
-const live2dCoreScript = '/Core/live2dcubismcore.js'
-const live2dResourcePath = '/Resources/'
+const live2dCoreScript = 'Core/live2dcubismcore.js'
+const live2dResourcePath = 'Resources/'
 
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
