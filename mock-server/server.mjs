@@ -51,7 +51,7 @@ if (process.env.LLM_BASE_URL && process.env.LLM_API_KEY) {
 }
 
 let ttsConfig = {
-  enabled: String(process.env.TTS_ENABLED || 'true') !== 'false',
+  enabled: String(process.env.TTS_ENABLED || 'false') === 'true',
   baseUrl: process.env.TTS_URL || 'http://localhost:9880',
   speaker: process.env.TTS_SPEAKER || 'xiaoxiao',
   language: process.env.TTS_LANGUAGE || 'Auto'
@@ -61,7 +61,20 @@ let avatarConfig = {
   outfit: '禅意青绿',
   voice: '温柔讲解女声',
   expressionLevel: 70,
-  culturalTheme: '太湖禅境'
+  culturalTheme: '太湖禅境',
+  voiceEnabled: true,
+  voiceSpeed: 1.02,
+  ttsSpeaker: ttsConfig.speaker,
+  ttsLanguage: ttsConfig.language,
+  preferLocalTTS: ttsConfig.enabled,
+  live2d: {
+    enabled: true,
+    assetBase: 'https://cdn.jsdelivr.net/gh/luckui/ai-live2d-go@nightly/public',
+    modelUrl: '',
+    coreUrl: '',
+    pixiUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js',
+    runtimeUrl: 'https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js'
+  }
 }
 
 const routes = [
@@ -328,6 +341,10 @@ app.post('/api/tts/config', (req, res) => {
   res.json({ ok: true, config: ttsConfig })
 })
 
+app.get('/api/avatar/config', (_req, res) => {
+  res.json(avatarConfig)
+})
+
 app.get('/api/tts/status', async (_req, res) => {
   if (!ttsConfig.enabled) {
     res.json({ enabled: false, healthy: false, provider: ttsConfig.baseUrl, detail: 'TTS disabled' })
@@ -421,7 +438,14 @@ app.get('/api/dashboard/overview', async (_req, res) => {
 })
 
 app.post('/api/avatar/config', (req, res) => {
-  avatarConfig = { ...avatarConfig, ...req.body }
+  avatarConfig = {
+    ...avatarConfig,
+    ...req.body,
+    live2d: {
+      ...avatarConfig.live2d,
+      ...(req.body?.live2d || {})
+    }
+  }
   res.json({ ok: true, config: avatarConfig })
 })
 

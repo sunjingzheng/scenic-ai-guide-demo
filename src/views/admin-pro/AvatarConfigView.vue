@@ -3,18 +3,27 @@ import { onMounted, ref } from 'vue'
 import { useGuideStore } from '../../stores/useGuideStore'
 import { UserOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import AvatarGuide from '../../components/AvatarGuide.vue'
-import type { RuntimeAIConfig, TTSConfig } from '../../types'
+import type { Live2DConfig, RuntimeAIConfig, TTSConfig } from '../../types'
 
 const store = useGuideStore()
 
 const outfits = ['formal', 'casual', 'traditional']
 const emotions = ['neutral', 'happy', 'thinking']
+const defaultLive2DConfig: Live2DConfig = {
+  enabled: true,
+  assetBase: 'https://cdn.jsdelivr.net/gh/luckui/ai-live2d-go@nightly/public',
+  modelUrl: '',
+  coreUrl: '',
+  pixiUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js',
+  runtimeUrl: 'https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js'
+}
 
 const config = ref({
   outfit: store.avatarConfig.outfit,
   defaultEmotion: 'neutral',
   voiceEnabled: store.avatarConfig.voiceEnabled ?? true,
   voiceSpeed: store.avatarConfig.voiceSpeed ?? 1.02,
+  live2d: structuredClone(store.avatarConfig.live2d || defaultLive2DConfig),
   autoGreeting: true,
   greetingText: '您好！我是灵山胜境的AI导览员，很高兴为您服务。'
 })
@@ -24,7 +33,14 @@ const ttsForm = ref<TTSConfig | null>(null)
 const saveState = ref('')
 
 onMounted(async () => {
-  await Promise.all([store.loadAIConfig(), store.loadTTSConfig(), store.refreshTTSStatus()])
+  await Promise.all([store.loadAvatarConfig(), store.loadAIConfig(), store.loadTTSConfig(), store.refreshTTSStatus()])
+  config.value = {
+    ...config.value,
+    outfit: store.avatarConfig.outfit,
+    voiceEnabled: store.avatarConfig.voiceEnabled ?? true,
+    voiceSpeed: store.avatarConfig.voiceSpeed ?? 1.02,
+    live2d: structuredClone(store.avatarConfig.live2d || defaultLive2DConfig)
+  }
   aiForm.value = structuredClone(store.aiConfig)
   ttsForm.value = structuredClone(store.ttsConfig)
 })
@@ -37,19 +53,24 @@ async function saveConfig() {
     voiceSpeed: config.value.voiceSpeed,
     ttsSpeaker: ttsForm.value?.speaker || store.avatarConfig.ttsSpeaker,
     ttsLanguage: ttsForm.value?.language || store.avatarConfig.ttsLanguage,
-    preferLocalTTS: true
+    preferLocalTTS: Boolean(ttsForm.value?.enabled),
+    live2d: config.value.live2d
   })
 
   if (aiForm.value) await store.saveAIConfig(aiForm.value)
   if (ttsForm.value) await store.saveTTSConfig(ttsForm.value)
   await store.refreshTTSStatus()
 
-  saveState.value = '已保存 AI 与语音配置'
+  saveState.value = '已保存数字人配置'
   window.setTimeout(() => (saveState.value = ''), 2200)
 }
 
 function previewVoice() {
   void store.speak(config.value.greetingText)
+}
+
+function resetLive2D() {
+  config.value.live2d = structuredClone(defaultLive2DConfig)
 }
 </script>
 
@@ -80,6 +101,7 @@ function previewVoice() {
               :speaking="false"
               :emotion="config.defaultEmotion"
               :outfit="config.outfit"
+              :live2d="config.live2d"
             />
           </div>
           <div class="preview-info">
@@ -166,28 +188,79 @@ function previewVoice() {
           </div>
         </div>
 
-        <!-- TTS 服务 -->
-        <div v-if="ttsForm" class="section-card">
-          <h3>TTS 服务</h3>
+        <!-- Live2D 设置 -->
+        <div class="section-card">
+          <h3>Live2D 模型</h3>
 
           <div class="form-group">
             <label class="checkbox-label">
-              <input type="checkbox" v-model="ttsForm.enabled" />
-              <span>优先使用本地 TTS 服务</span>
+              <input type="checkbox" v-model="config.live2d.enabled" />
+              <span>启用 Live2D 模型</span>
             </label>
           </div>
 
           <div class="form-group">
+            <label>资源根地址</label>
+            <input
+              v-model="config.live2d.assetBase"
+              class="input"
+              placeholder="https://cdn.jsdelivr.net/gh/luckui/ai-live2d-go@nightly/public"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>模型文件地址（留空则使用 Hiyori 默认模型）</label>
+            <input
+              v-model="config.live2d.modelUrl"
+              class="input"
+              placeholder="Resources/Hiyori_pro/hiyori_pro_t11.model3.json"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Cubism Core 脚本（留空则使用资源根地址下的 Core）</label>
+            <input v-model="config.live2d.coreUrl" class="input" placeholder="Core/live2dcubismcore.js" />
+          </div>
+
+          <div class="form-group">
+            <label>Pixi 脚本</label>
+            <input v-model="config.live2d.pixiUrl" class="input" />
+          </div>
+
+          <div class="form-group">
+            <label>Pixi Live2D Cubism4 运行时</label>
+            <input v-model="config.live2d.runtimeUrl" class="input" />
+          </div>
+
+          <div class="form-group">
+            <button class="btn btn-secondary" @click="resetLive2D">
+              恢复默认 Hiyori 配置
+            </button>
+          </div>
+        </div>
+
+        <!-- TTS 服务 -->
+        <div v-if="ttsForm" class="section-card">
+          <h3>本地 TTS（可选）</h3>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="ttsForm.enabled" />
+              <span>使用本地 TTS 生成音频并驱动口型</span>
+            </label>
+          </div>
+
+          <div v-if="ttsForm.enabled" class="form-group">
             <label>服务地址</label>
             <input v-model="ttsForm.baseUrl" class="input" placeholder="http://localhost:9880" />
           </div>
 
-          <div class="form-group">
+          <div v-if="ttsForm.enabled" class="form-group">
             <label>音色 / Speaker</label>
             <input v-model="ttsForm.speaker" class="input" placeholder="xiaoxiao" />
           </div>
 
-          <div class="form-group">
+          <div v-if="ttsForm.enabled" class="form-group">
             <label>语言</label>
             <input v-model="ttsForm.language" class="input" placeholder="Auto" />
           </div>

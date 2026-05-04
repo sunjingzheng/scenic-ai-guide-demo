@@ -71,6 +71,15 @@ export type TTSStatus = {
   speakers?: string[]
 }
 
+export type Live2DConfig = {
+  enabled: boolean
+  assetBase: string
+  modelUrl: string
+  coreUrl: string
+  pixiUrl: string
+  runtimeUrl: string
+}
+
 export type DashboardOverview = {
   metrics: Array<{ label: string; value: string; trend: string }>
   satisfactionTrend: Array<{ month: string; satisfaction: number; visitors: number }>
@@ -92,4 +101,5 @@ export type AvatarConfig = {
   ttsSpeaker?: string
   ttsLanguage?: string
   preferLocalTTS?: boolean
+  live2d?: Live2DConfig
 }

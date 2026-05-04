@@ -40,14 +40,30 @@ export const useGuideStore = defineStore('guide', () => {
     voiceSpeed: 1.02,
     ttsSpeaker: 'xiaoxiao',
     ttsLanguage: 'Auto',
-    preferLocalTTS: true
+    preferLocalTTS: false,
+    live2d: {
+      enabled: true,
+      assetBase: 'https://cdn.jsdelivr.net/gh/luckui/ai-live2d-go@nightly/public',
+      modelUrl: '',
+      coreUrl: '',
+      pixiUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js',
+      runtimeUrl: 'https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js'
+    }
   })
 
   const featuredSpots = computed(() => spots.value.slice(0, 6))
 
   async function loadBaseData() {
+    await loadAvatarConfig()
     if (!spots.value.length) spots.value = await api.getSpots()
     if (!routes.value.length) routes.value = await api.recommendRoutes(currentInterest.value)
+  }
+
+  async function loadAvatarConfig() {
+    avatarConfig.value = {
+      ...avatarConfig.value,
+      ...(await api.getAvatar())
+    }
   }
 
   async function loadDashboard() {
@@ -67,10 +83,9 @@ export const useGuideStore = defineStore('guide', () => {
     ttsConfig.value = await api.getTTSConfig()
     avatarConfig.value = {
       ...avatarConfig.value,
-      voiceEnabled: ttsConfig.value.enabled,
       ttsSpeaker: ttsConfig.value.speaker,
       ttsLanguage: ttsConfig.value.language,
-      preferLocalTTS: true
+      preferLocalTTS: ttsConfig.value.enabled
     }
   }
 
@@ -79,9 +94,9 @@ export const useGuideStore = defineStore('guide', () => {
     ttsConfig.value = result.config
     avatarConfig.value = {
       ...avatarConfig.value,
-      voiceEnabled: result.config.enabled,
       ttsSpeaker: result.config.speaker,
-      ttsLanguage: result.config.language
+      ttsLanguage: result.config.language,
+      preferLocalTTS: result.config.enabled
     }
   }
 
@@ -162,6 +177,7 @@ export const useGuideStore = defineStore('guide', () => {
     loadTTSConfig,
     saveTTSConfig,
     refreshTTSStatus,
+    loadAvatarConfig,
     ask,
     speak,
     updateInterest,

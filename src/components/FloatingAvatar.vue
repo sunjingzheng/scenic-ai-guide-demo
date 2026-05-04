@@ -76,6 +76,7 @@ function toggleMinimize() {
         :speaking="store.speaking"
         :emotion="store.currentEmotion"
         :outfit="store.avatarConfig.outfit"
+        :live2d="store.avatarConfig.live2d"
       />
       <div v-if="store.speaking" class="pulse-ring"></div>
     </div>
@@ -107,6 +108,7 @@ function toggleMinimize() {
           :speaking="store.speaking"
           :emotion="store.currentEmotion"
           :outfit="store.avatarConfig.outfit"
+          :live2d="store.avatarConfig.live2d"
         />
         <div class="avatar-status">
           <span :class="{ pulse: store.speaking }"></span>

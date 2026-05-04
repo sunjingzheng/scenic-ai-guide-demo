@@ -48,6 +48,7 @@ export const api = {
       body: JSON.stringify(config)
     }),
   getTTSStatus: () => request<TTSStatus>('/api/tts/status'),
+  getAvatar: () => request<AvatarConfig>('/api/avatar/config'),
   saveAvatar: (config: AvatarConfig) =>
     request<{ ok: boolean; config: AvatarConfig }>('/api/avatar/config', {
       method: 'POST',
