@@ -1,0 +1,18 @@
+{
+  "_comment": "迁移自 ai-live2d-go 的平台桥接配置。当前纯前端项目只负责保存配置，真正发送微信/Discord 需要后端或桌面桥接服务接入。",
+  "wechat": {
+    "enabled": false,
+    "token": "",
+    "accountId": "",
+    "baseUrl": "https://ilinkai.weixin.qq.com",
+    "conversationId": "",
+    "sendChunkDelay": 0.35
+  },
+  "discord": {
+    "enabled": false,
+    "token": "",
+    "allowedChannels": [],
+    "conversationId": "",
+    "proxyUrl": ""
+  }
+}

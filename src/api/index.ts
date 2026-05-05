@@ -7,13 +7,15 @@ const DATA_FILES = {
   routes: 'routes.json',
   avatar: 'avatar-config.json',
   ai: 'ai-config.json',
-  tts: 'tts-config.json'
+  tts: 'tts-config.json',
+  bridge: 'bridge-config.json'
 }
 
 const STORAGE_KEYS = {
   avatar: 'scenic.avatar.config',
   ai: 'scenic.ai.config',
-  tts: 'scenic.tts.config'
+  tts: 'scenic.tts.config',
+  bridge: 'scenic.bridge.config'
 }
 
 async function getJson(file: string) {
@@ -23,6 +25,70 @@ async function getJson(file: string) {
 
 function normalize(text: string) {
   return String(text || '').toLowerCase()
+}
+
+function mergePlain(defaultValue: any, storedValue: any) {
+  if (!storedValue || typeof storedValue !== 'object') return defaultValue
+  if (!defaultValue || typeof defaultValue !== 'object') return storedValue
+
+  const result = { ...defaultValue, ...storedValue }
+  for (const key of Object.keys(defaultValue)) {
+    if (
+      defaultValue[key] &&
+      storedValue[key] &&
+      typeof defaultValue[key] === 'object' &&
+      typeof storedValue[key] === 'object' &&
+      !Array.isArray(defaultValue[key]) &&
+      !Array.isArray(storedValue[key])
+    ) {
+      result[key] = mergePlain(defaultValue[key], storedValue[key])
+    }
+  }
+  return result
+}
+
+function getActiveTTSProvider(config: any) {
+  return config.providers?.[config.activeProvider] || null
+}
+
+function normalizeTTSConfig(config: any) {
+  const provider = getActiveTTSProvider(config)
+  if (!provider) return config
+
+  return {
+    ...config,
+    provider: provider.engine || config.provider,
+    baseUrl: provider.baseUrl,
+    apiPath: provider.apiPath || config.apiPath,
+    apiKey: provider.apiKey || config.apiKey,
+    speaker: provider.speaker,
+    language: provider.language,
+    gptSoVits: provider.gptSoVits || config.gptSoVits
+  }
+}
+
+function normalizeAvatarConfig(config: any) {
+  const live2d = config.live2d || {}
+  return {
+    ...config,
+    live2d: {
+      ...live2d,
+      assetBase:
+        !live2d.assetBase || String(live2d.assetBase).includes('cdn.jsdelivr.net')
+          ? '/live2d'
+          : live2d.assetBase,
+      modelUrl: live2d.modelUrl || 'Resources/Hiyori_pro/hiyori_pro_t11.model3.json',
+      coreUrl: live2d.coreUrl || 'Core/live2dcubismcore.js',
+      pixiUrl:
+        !live2d.pixiUrl || String(live2d.pixiUrl).includes('cdn.jsdelivr.net')
+          ? '/live2d/vendor/pixi.min.js'
+          : live2d.pixiUrl,
+      runtimeUrl:
+        !live2d.runtimeUrl || String(live2d.runtimeUrl).includes('cdn.jsdelivr.net')
+          ? '/live2d/vendor/cubism4.min.js'
+          : live2d.runtimeUrl
+    }
+  }
 }
 
 function pickEmotion(text: string) {
@@ -102,7 +168,8 @@ export const api = {
   },
 
   async getAIConfig() {
-    return readStored(STORAGE_KEYS.ai) || await getJson(DATA_FILES.ai)
+    const defaults = await getJson(DATA_FILES.ai)
+    return mergePlain(defaults, readStored(STORAGE_KEYS.ai))
   },
 
   async saveAIConfig(config: any) {
@@ -111,7 +178,8 @@ export const api = {
   },
 
   async getTTSConfig() {
-    return readStored(STORAGE_KEYS.tts) || await getJson(DATA_FILES.tts)
+    const defaults = await getJson(DATA_FILES.tts)
+    return normalizeTTSConfig(mergePlain(defaults, readStored(STORAGE_KEYS.tts)))
   },
 
   async saveTTSConfig(config: any) {
@@ -131,7 +199,7 @@ export const api = {
     }
 
     try {
-      await apiGet(`${config.baseUrl.replace(/\/$/, '')}/docs`, { responseType: 'text' })
+      await apiGet(`${config.baseUrl.replace(/\/$/, '')}/docs`, { responseType: 'text', timeout: 2500 })
       return {
         enabled: true,
         healthy: true,
@@ -149,11 +217,22 @@ export const api = {
   },
 
   async getAvatar() {
-    return readStored(STORAGE_KEYS.avatar) || await getJson(DATA_FILES.avatar)
+    const defaults = await getJson(DATA_FILES.avatar)
+    return normalizeAvatarConfig(mergePlain(defaults, readStored(STORAGE_KEYS.avatar)))
   },
 
   async saveAvatar(config: any) {
     writeStored(STORAGE_KEYS.avatar, config)
+    return { ok: true, config }
+  },
+
+  async getBridgeConfig() {
+    const defaults = await getJson(DATA_FILES.bridge)
+    return mergePlain(defaults, readStored(STORAGE_KEYS.bridge))
+  },
+
+  async saveBridgeConfig(config: any) {
+    writeStored(STORAGE_KEYS.bridge, config)
     return { ok: true, config }
   }
 }

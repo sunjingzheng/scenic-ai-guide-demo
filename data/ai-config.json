@@ -10,16 +10,61 @@
       "model": "json-rag",
       "maxTokens": 1024,
       "temperature": 0.65,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": [],
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
+    },
+    "doubao": {
+      "type": "openai-compatible",
+      "name": "豆包",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "apiKey": "",
+      "model": "doubao-pro-4k",
+      "maxTokens": 1024,
+      "temperature": 0.85,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": ["default"],
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
+    },
+    "doubao_coding_plan": {
+      "type": "openai-compatible",
+      "name": "豆包 Coding Plan",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
+      "apiKey": "",
+      "model": "doubao-seed-2.0-code",
+      "maxTokens": 2048,
+      "temperature": 0.85,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": ["default"],
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
+    },
+    "qwen_local": {
+      "type": "openai-compatible",
+      "name": "Qwen 本地",
+      "baseUrl": "http://localhost:7860",
+      "apiKey": "EMPTY",
+      "model": "Qwen3.5-4B",
+      "maxTokens": 1024,
+      "temperature": 0.7,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": ["default"],
+      "extraParams": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
       "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
     },
     "openai_compatible": {
       "type": "openai-compatible",
       "name": "OpenAI Compatible",
-      "baseUrl": "",
+      "baseUrl": "https://api.openai.com/v1",
       "apiKey": "",
       "model": "gpt-4o-mini",
       "maxTokens": 1024,
       "temperature": 0.7,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": [],
       "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；优先使用 data/ 里的本地景区知识库资料。"
     }
   }

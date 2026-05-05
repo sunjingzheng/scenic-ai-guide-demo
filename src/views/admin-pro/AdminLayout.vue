@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, useRouter, useRoute } from 'vue-router'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
   DashboardOutlined,
   DatabaseOutlined,
@@ -15,6 +15,10 @@ import {
 const router = useRouter()
 const route = useRoute()
 const collapsed = ref(false)
+const selectedKeys = computed(() => {
+  const active = menuItems.find((item) => route.path === item.path)
+  return active ? [active.key] : ['dashboard']
+})
 
 const menuItems = [
   { key: 'dashboard', path: '/admin/dashboard', icon: DashboardOutlined, label: '数据概览' },
@@ -23,8 +27,9 @@ const menuItems = [
   { key: 'feedback', path: '/admin/feedback', icon: MessageOutlined, label: '反馈报告' }
 ]
 
-function isActive(path: string) {
-  return route.path === path
+function openMenu({ key }: { key: string }) {
+  const target = menuItems.find((item) => item.key === key)
+  if (target) void router.push(target.path)
 }
 
 function toggleCollapse() {
@@ -37,277 +42,249 @@ function logout() {
 </script>
 
 <template>
-  <div class="admin-layout">
-    <!-- 侧边栏 -->
-    <aside class="sidebar" :class="{ collapsed }">
-      <div class="sidebar-header">
-        <div class="logo">
-          <span class="logo-icon">🏛️</span>
-          <span v-if="!collapsed" class="logo-text">灵山管理后台</span>
+  <a-layout class="admin-layout">
+    <a-layout-sider
+      v-model:collapsed="collapsed"
+      class="admin-sider"
+      :width="248"
+      :collapsed-width="84"
+      :trigger="null"
+    >
+      <div class="brand">
+        <div class="brand-icon">
+          <UserOutlined />
+        </div>
+        <div v-if="!collapsed" class="brand-copy">
+          <strong>灵山管理后台</strong>
+          <span>Scenic AI Console</span>
         </div>
       </div>
 
-      <nav class="sidebar-menu">
-        <button
-          v-for="item in menuItems"
-          :key="item.key"
-          class="menu-item"
-          :class="{ active: isActive(item.path) }"
-          @click="router.push(item.path)"
-        >
-          <component :is="item.icon" class="menu-icon" />
-          <span v-if="!collapsed" class="menu-label">{{ item.label }}</span>
-        </button>
-      </nav>
+      <a-menu
+        class="admin-menu"
+        mode="inline"
+        :selected-keys="selectedKeys"
+        @click="openMenu"
+      >
+        <a-menu-item v-for="item in menuItems" :key="item.key">
+          <template #icon>
+            <component :is="item.icon" />
+          </template>
+          <span>{{ item.label }}</span>
+        </a-menu-item>
+      </a-menu>
 
-      <div class="sidebar-footer">
-        <button class="menu-item" @click="logout">
-          <LogoutOutlined class="menu-icon" />
-          <span v-if="!collapsed" class="menu-label">退出登录</span>
-        </button>
+      <div class="sider-footer">
+        <a-button block class="neo-button" @click="logout">
+          <template #icon><LogoutOutlined /></template>
+          <span v-if="!collapsed">退出登录</span>
+        </a-button>
       </div>
-    </aside>
+    </a-layout-sider>
 
-    <!-- 主内容区 -->
-    <div class="main-wrapper">
-      <!-- 顶部栏 -->
-      <header class="top-header">
-        <button class="collapse-btn" @click="toggleCollapse">
+    <a-layout class="main-wrapper">
+      <a-layout-header class="top-header">
+        <a-button class="icon-button" @click="toggleCollapse">
           <MenuFoldOutlined v-if="!collapsed" />
           <MenuUnfoldOutlined v-else />
-        </button>
+        </a-button>
 
-        <div class="header-actions">
-          <button class="action-btn">
+        <a-space :size="16">
+          <a-button class="icon-button">
             <SettingOutlined />
-          </button>
-          <div class="user-info">
+          </a-button>
+          <div class="admin-user">
             <span>管理员</span>
-            <div class="avatar">👤</div>
+            <a-avatar class="user-avatar">
+              <template #icon><UserOutlined /></template>
+            </a-avatar>
           </div>
-        </div>
-      </header>
+        </a-space>
+      </a-layout-header>
 
-      <!-- 内容区域 -->
-      <main class="content-area">
+      <a-layout-content class="content-area">
         <RouterView />
-      </main>
-    </div>
-  </div>
+      </a-layout-content>
+    </a-layout>
+  </a-layout>
 </template>
 
 <style scoped>
 .admin-layout {
-  display: flex;
   min-height: 100vh;
-  background: var(--gray-50);
+  background: var(--surface);
 }
 
-/* 侧边栏 */
-.sidebar {
-  width: 240px;
-  background: white;
-  border-right: 1px solid var(--border-light);
+.admin-sider {
+  background: var(--surface-raised) !important;
+  border-right: 1px solid var(--glass-border);
+  box-shadow: 10px 0 28px rgba(151, 169, 158, 0.24);
+  position: fixed !important;
+  inset: 0 auto 0 0;
+  z-index: 100;
   display: flex;
   flex-direction: column;
-  transition: width var(--transition-base);
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 100;
 }
 
-.sidebar.collapsed {
-  width: 80px;
-}
-
-.sidebar-header {
+.brand {
+  min-height: 84px;
   padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
-.logo-icon {
-  font-size: 2rem;
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  display: grid;
+  place-items: center;
+  color: var(--text-inverse);
+  background: linear-gradient(145deg, #65b98b, #2f8f62);
+  box-shadow: var(--shadow-sm);
+  flex: 0 0 auto;
 }
 
-.logo-text {
-  font-size: 1.125rem;
-  font-weight: 600;
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand-copy strong {
+  font-size: 1rem;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.sidebar-menu {
-  flex: 1;
-  padding: var(--spacing-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+.brand-copy span {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
 }
 
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border: none;
+:deep(.admin-menu) {
   background: transparent;
+  border-inline-end: 0 !important;
+  padding: 0 var(--spacing-md);
+}
+
+:deep(.admin-menu .ant-menu-item) {
+  height: 46px;
+  line-height: 46px;
+  margin: 0 0 var(--spacing-xs);
+  border-radius: var(--radius-lg);
   color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-size: 0.875rem;
-  text-align: left;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
 }
 
-.menu-item:hover {
-  background: var(--primary-50);
-  color: var(--primary-600);
+:deep(.admin-menu .ant-menu-item:hover) {
+  color: var(--primary-700) !important;
+  background: var(--surface-raised) !important;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
-.menu-item.active {
+:deep(.admin-menu .ant-menu-item-selected) {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  color: white;
+  color: var(--text-inverse) !important;
+  box-shadow: 8px 8px 18px rgba(107, 140, 119, 0.45), -8px -8px 18px rgba(255, 255, 255, 0.82);
 }
 
-.menu-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
+:deep(.admin-menu .ant-menu-item-selected::after) {
+  display: none;
 }
 
-.menu-label {
-  white-space: nowrap;
-}
-
-.sidebar.collapsed .menu-item {
-  justify-content: center;
-}
-
-.sidebar-footer {
+.sider-footer {
+  margin-top: auto;
   padding: var(--spacing-md);
-  border-top: 1px solid var(--border-light);
 }
 
-/* 主内容区 */
 .main-wrapper {
-  flex: 1;
-  margin-left: 240px;
+  min-height: 100vh;
+  margin-left: 248px;
+  background: transparent;
   transition: margin-left var(--transition-base);
-  display: flex;
-  flex-direction: column;
 }
 
-.sidebar.collapsed ~ .main-wrapper {
-  margin-left: 80px;
+.admin-sider.ant-layout-sider-collapsed + .main-wrapper {
+  margin-left: 84px;
 }
 
 .top-header {
-  height: 64px;
-  background: white;
-  border-bottom: 1px solid var(--border-light);
+  height: 72px;
+  padding: 0 var(--spacing-xl);
+  background: rgba(246, 250, 247, 0.78);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--spacing-xl);
   position: sticky;
   top: 0;
   z-index: 90;
 }
 
-.collapse-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
+.icon-button,
+.neo-button {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
   color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
-.collapse-btn:hover {
-  background: var(--primary-50);
-  color: var(--primary-600);
+.icon-button {
+  width: 42px;
+  height: 42px;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
+.icon-button:hover,
+.neo-button:hover {
+  color: var(--primary-700);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
 }
 
-.action-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  transition: all var(--transition-fast);
-}
-
-.action-btn:hover {
-  background: var(--gray-100);
-  color: var(--text-primary);
-}
-
-.user-info {
+.admin-user {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-md);
-  background: var(--gray-50);
-  border-radius: var(--radius-lg);
+  padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-xs) var(--spacing-md);
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-inset-sm);
 }
 
-.user-info span {
+.admin-user span {
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.user-avatar {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
 }
 
 .content-area {
-  flex: 1;
   padding: var(--spacing-xl);
+  min-height: calc(100vh - 72px);
+  background: transparent;
 }
 
 @media (max-width: 768px) {
-  .sidebar {
-    width: 80px;
+  .admin-sider {
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
   }
 
   .main-wrapper {
-    margin-left: 80px;
+    margin-left: 84px;
   }
 
-  .logo-text,
-  .menu-label {
+  .brand-copy,
+  .neo-button span {
     display: none;
   }
 }

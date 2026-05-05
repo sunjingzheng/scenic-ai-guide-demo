@@ -12,7 +12,9 @@ const props = defineProps<{
 
 const live2dFailed = ref(false)
 const eyeClass = computed(() => (props.emotion === 'thinking' ? 'thinking' : 'bright'))
-const mouthClass = computed(() => (props.speaking ? 'speaking' : props.emotion === 'smile' ? 'smile' : 'calm'))
+const mouthClass = computed(() =>
+  props.speaking ? 'speaking' : props.emotion === 'smile' || props.emotion === 'happy' ? 'smile' : 'calm'
+)
 const live2dKey = computed(() => JSON.stringify(props.live2d || {}))
 const showFallback = computed(() => live2dFailed.value || props.live2d?.enabled === false)
 

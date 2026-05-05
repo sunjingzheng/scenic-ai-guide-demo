@@ -4,6 +4,7 @@ import { api } from '../api'
 import { playGuideTTS } from '../features/guideTts'
 import type {
   AvatarConfig,
+  BridgeConfig,
   ChatMessage,
   DashboardOverview,
   RoutePlan,
@@ -31,11 +32,15 @@ export const useGuideStore = defineStore('guide', () => {
   const aiConfig = ref<RuntimeAIConfig | null>(null)
   const ttsConfig = ref<TTSConfig | null>(null)
   const ttsStatus = ref<TTSStatus | null>(null)
+  const bridgeConfig = ref<BridgeConfig | null>(null)
   const avatarConfig = ref<AvatarConfig>({
     outfit: '禅意青绿',
     voice: '温柔讲解女声',
     expressionLevel: 70,
     culturalTheme: '太湖禅境',
+    defaultEmotion: 'happy',
+    autoGreeting: true,
+    greetingText: '您好！我是灵山胜境的AI导览员，很高兴为您服务。',
     voiceEnabled: true,
     voiceSpeed: 1.02,
     ttsSpeaker: 'zero-shot',
@@ -43,11 +48,11 @@ export const useGuideStore = defineStore('guide', () => {
     preferLocalTTS: false,
     live2d: {
       enabled: true,
-      assetBase: 'https://cdn.jsdelivr.net/gh/luckui/ai-live2d-go@nightly/public',
-      modelUrl: '',
-      coreUrl: '',
-      pixiUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js',
-      runtimeUrl: 'https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js'
+      assetBase: '/live2d',
+      modelUrl: 'Resources/Hiyori_pro/hiyori_pro_t11.model3.json',
+      coreUrl: 'Core/live2dcubismcore.js',
+      pixiUrl: '/live2d/vendor/pixi.min.js',
+      runtimeUrl: '/live2d/vendor/cubism4.min.js'
     }
   })
 
@@ -103,6 +108,15 @@ export const useGuideStore = defineStore('guide', () => {
 
   async function refreshTTSStatus() {
     ttsStatus.value = await api.getTTSStatus()
+  }
+
+  async function loadBridgeConfig() {
+    bridgeConfig.value = await api.getBridgeConfig()
+  }
+
+  async function saveBridgeConfig(config: BridgeConfig) {
+    const result = await api.saveBridgeConfig(config)
+    bridgeConfig.value = result.config
   }
 
   async function ask(text: string) {
@@ -170,6 +184,7 @@ export const useGuideStore = defineStore('guide', () => {
     aiConfig,
     ttsConfig,
     ttsStatus,
+    bridgeConfig,
     avatarConfig,
     featuredSpots,
     loadBaseData,
@@ -179,6 +194,8 @@ export const useGuideStore = defineStore('guide', () => {
     loadTTSConfig,
     saveTTSConfig,
     refreshTTSStatus,
+    loadBridgeConfig,
+    saveBridgeConfig,
     loadAvatarConfig,
     ask,
     speak,

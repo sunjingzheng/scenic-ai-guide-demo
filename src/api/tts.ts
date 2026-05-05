@@ -30,8 +30,18 @@ function buildGptSoVitsPayload(text: string, config: any) {
 
 export async function requestGptSoVitsTTS(text: string, config: any) {
   const endpoint = `${config.baseUrl.replace(/\/$/, '')}${config.apiPath || '/tts'}`
-  const response = await apiPost(endpoint, buildGptSoVitsPayload(text, config), {
-    responseType: 'arraybuffer'
+  const isGptSoVits = config.provider === 'gpt-sovits-v2-pro-plus' || config.provider === 'gpt-sovits'
+  const payload = isGptSoVits
+    ? buildGptSoVitsPayload(text, config)
+    : {
+        text,
+        speaker: config.speaker,
+        language: config.language
+      }
+  const headers = config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : undefined
+  const response = await apiPost(endpoint, payload, {
+    responseType: 'arraybuffer',
+    headers
   })
   const headerValue = response.headers['content-type'] || response.headers['Content-Type'] || 'audio/wav'
   const contentType = Array.isArray(headerValue) ? headerValue[0] : String(headerValue)

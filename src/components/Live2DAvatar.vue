@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const loading = ref(true)
 const isActive = ref(false)
+const instanceId = Symbol('live2d-avatar')
 
 const repoBase =
   props.config?.assetBase ||
@@ -32,10 +33,10 @@ function resolveAssetUrl(value: string | undefined, fallbackPath: string) {
 const scripts = [
   resolveAssetUrl(props.config?.coreUrl || import.meta.env.VITE_LIVE2D_CORE_URL, 'Core/live2dcubismcore.js'),
   props.config?.pixiUrl ||
-  import.meta.env.VITE_PIXI_URL || 'https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js',
+  import.meta.env.VITE_PIXI_URL || '/live2d/vendor/pixi.min.js',
   props.config?.runtimeUrl ||
   import.meta.env.VITE_PIXI_LIVE2D_URL ||
-    'https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js'
+    '/live2d/vendor/cubism4.min.js'
 ]
 const modelUrl = resolveAssetUrl(
   props.config?.modelUrl || import.meta.env.VITE_LIVE2D_MODEL_URL,
@@ -58,11 +59,18 @@ function loadScript(src: string) {
     const script = existing ?? document.createElement('script')
     script.src = src
     script.async = false
+    const timeout = window.setTimeout(() => {
+      reject(new Error(`Live2D 依赖加载超时：${src}`))
+    }, 12000)
     script.onload = () => {
+      window.clearTimeout(timeout)
       script.dataset.loaded = 'true'
       resolve()
     }
-    script.onerror = () => reject(new Error(`Live2D 依赖加载失败：${src}`))
+    script.onerror = () => {
+      window.clearTimeout(timeout)
+      reject(new Error(`Live2D 依赖加载失败：${src}`))
+    }
     if (!existing) document.head.appendChild(script)
   })
 }
@@ -181,8 +189,7 @@ function stopMouthSync() {
 }
 
 async function mountLive2D() {
-  if (window.__live2dAvatarMounted || !canvasRef.value) return
-  window.__live2dAvatarMounted = true
+  if (!canvasRef.value) return
 
   await nextTick()
 
@@ -212,6 +219,7 @@ async function mountLive2D() {
     applyEmotion()
 
     window.addEventListener('resize', resizeModel)
+    window.__live2dAvatarActiveId = instanceId
     window.__live2dGetModel = () => ({
       _wavFileHandler: {
         startFromBuffer: startMouthSyncFromBuffer,
@@ -228,7 +236,10 @@ async function mountLive2D() {
     loading.value = false
     isActive.value = true
   } catch (error) {
-    window.__live2dAvatarMounted = false
+    if (window.__live2dAvatarActiveId === instanceId) {
+      window.__live2dAvatarActiveId = undefined
+      window.__live2dGetModel = undefined
+    }
     emit('error', error instanceof Error ? error.message : 'Live2D 初始化失败')
   }
 }
@@ -255,8 +266,10 @@ onBeforeUnmount(() => {
   app = null
   model = null
   isActive.value = false
-  window.__live2dAvatarMounted = false
-  window.__live2dGetModel = undefined
+  if (window.__live2dAvatarActiveId === instanceId) {
+    window.__live2dAvatarActiveId = undefined
+    window.__live2dGetModel = undefined
+  }
 })
 </script>
 

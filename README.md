@@ -1,17 +1,20 @@
 # 景区导览服务 AI 数字人 Demo
 
-这是一个纯前端景区 AI 数字人导览 Demo，使用 Vue 3 + Vite + TypeScript 实现。项目现在没有 Express mock-server，也没有数据处理脚本；所有业务数据和可配置项都固定放在 `data/*.json` 中，前端通过 `src/api/` 里的 axios API 逐个读取。
+纯前端 Vue 3 + Vite + TypeScript 演示项目。所有景区数据、AI 配置、TTS 配置、Live2D 模型配置、微信/平台桥接配置都放在 `data/*.json`，前端通过 `src/api/` 统一读取，后续接真实后端时只需要替换这一层。
 
-适合用来做比赛演示、前端交互原型、数字人导览 UI 魔改。
+本轮已从 `/Users/mac/Projects/ai-live2d-go` 迁入可复用内容：
 
-## 快速运行
+- Live2D Cubism Core 与 Hiyori/Hiyori Pro 模型资源：`public/live2d/`
+- AI 多 Provider 配置结构：`data/ai-config.json`
+- TTS 多 Provider 配置结构：`data/tts-config.json`
+- 微信 iLink / Discord 桥接配置结构：`data/bridge-config.json`
+- 管理端配置入口：`/admin/avatar`
 
-环境要求：
+管理端已统一接入 Ant Design Vue，并在现有拟态化主题变量上做了覆盖。数字人相关配置都能在 `/admin/avatar` 可视化修改，不需要打开代码文件；保存后写入浏览器 localStorage，点“恢复默认”会回到 `data/*.json` 的默认配置。
 
-- Node.js 20+
-- npm 10+
+没有迁入 Electron、SQLite、STT、Discord/微信自动发送工具、浏览器自动化工具等桌面端执行代码；当前项目只负责前端展示和保存配置。真正连接微信发送消息仍需要后续后端或桌面桥接服务读取这些配置。
 
-安装并启动：
+## 运行
 
 ```bash
 npm install
@@ -31,260 +34,162 @@ npm run build
 npm run preview
 ```
 
-构建时 Vite 会把根目录 `data/` 复制到 `dist/data/`，所以预览和部署后仍然能通过 `/data/*.json` 读取数据。
-
-## 现在的数据流
+## 目录
 
 ```text
-页面组件
-  -> src/stores/useGuideStore.ts
-  -> src/api/index.ts
-  -> src/api/http.ts
-  -> /data/*.json
+data/
+  spots.json             # 景点知识库
+  dashboard.json         # 运营看板数据
+  routes.json            # 路线推荐数据
+  avatar-config.json     # 数字人、Live2D 本地模型资源配置
+  ai-config.json         # AI 多 Provider 配置
+  tts-config.json        # TTS 多 Provider 配置
+  bridge-config.json     # 微信 iLink / Discord 桥接配置
+
+public/live2d/
+  Core/                  # live2dcubismcore.js
+  vendor/                # 本地 Pixi 和 Cubism4 runtime，避免访问 CDN 才能显示
+  Resources/Hiyori/      # Hiyori 模型
+  Resources/Hiyori_pro/  # Hiyori Pro 模型
+
+src/api/
+  http.ts                # axios 实例，后续接后端主要改这里
+  index.ts               # 业务 API：读 data/*.json、保存 localStorage
+  tts.ts                 # GPT-SoVITS / HTTP TTS 请求封装
+  storage.ts             # localStorage 读写
+
+src/components/
+  Live2DAvatar.vue       # Live2D 加载和口型驱动
+  AvatarGuide.vue        # 数字人外壳和 fallback 形象
+  FloatingAvatar.vue     # 游客端悬浮窗
+
+src/views/admin-pro/
+  AvatarConfigView.vue   # AI、TTS、Live2D、微信配置管理页
 ```
 
-没有后端接口了。以前的 `/api/...` 已经替换为静态 JSON：
+## 管理端能配置什么
 
-- `/data/spots.json`
-- `/data/dashboard.json`
-- `/data/routes.json`
-- `/data/avatar-config.json`
-- `/data/ai-config.json`
-- `/data/tts-config.json`
-
-需要保存的管理端配置会写入浏览器 `localStorage`，刷新页面仍然保留；换浏览器或清缓存后，会重新读取 `data/*.json` 默认值。
-
-## 目录说明
+进入：
 
 ```text
-scenic-ai-guide-demo/
-  data/                         # 全部业务数据和可配置 JSON
-    spots.json                  # 景点知识库，来自示范景区公开资料包
-    dashboard.json              # 管理端看板数据
-    routes.json                 # 路线推荐数据
-    avatar-config.json          # 数字人、Live2D、语音默认配置
-    ai-config.json              # AI 配置默认值，目前本地 JSON 问答优先
-    tts-config.json             # GPT-SoVITS V2ProPlus zero-shot 配置
-  src/
-    api/
-      index.ts                  # 前端 API 总入口，统一读取 data/*.json
-      http.ts                   # 官方 axios 实例和 get/post 封装
-      storage.ts                # localStorage 读写封装
-      tts.ts                    # GPT-SoVITS 请求封装
-    stores/useGuideStore.ts     # Pinia 状态，负责问答、路线、数字人、TTS 状态
-    features/guideTts.ts        # 浏览器语音、音频播放、Live2D 口型同步
-    components/
-      Live2DAvatar.vue          # Live2D 模型加载和口型参数驱动
-      AvatarGuide.vue           # 数字人外壳，Live2D 失败时显示 fallback 形象
-      FloatingAvatar.vue        # 游客端右下角悬浮窗
-      EChart.vue                # ECharts 包装组件
-      MetricCard.vue            # 管理端指标卡
-    views/
-      user/                     # 游客端页面
-      admin-pro/                # 当前使用的管理端页面
-    styles/
-      theme.css                 # 拟态风主题变量和全局组件风格
-    router.ts                   # 前端路由
-    types.ts                    # 全局 TypeScript 类型
-  vite.config.ts                # Vite 配置，同时负责开发/构建时暴露 data/
+http://localhost:5173/admin/avatar
 ```
 
-## 想魔改先看哪里
+可以配置：
 
-- 改景点知识：`data/spots.json`
-- 改运营看板：`data/dashboard.json`
-- 改路线推荐：`data/routes.json`
-- 改数字人默认配置：`data/avatar-config.json`
-- 改 TTS/GPT-SoVITS 默认配置：`data/tts-config.json`
-- 改问答匹配规则：`src/api/index.ts`
-- 改页面状态和语音触发：`src/stores/useGuideStore.ts`
-- 改 GPT-SoVITS 调用参数：`src/api/tts.ts`
-- 改游客端界面：`src/views/user/`
-- 改管理端界面：`src/views/admin-pro/`
-- 改拟态风视觉：`src/styles/theme.css`
+- 数字人外观、语音开关、语速
+- Live2D 模型预设：本地 Hiyori Pro、本地 Hiyori
+- Live2D 资源根地址、model3.json、Cubism Core、Pixi、Cubism4 runtime
+- TTS Provider：GPT-SoVITS V2ProPlus、Edge-TTS、MOSS-TTS-Nano、通用 HTTP TTS
+- GPT-SoVITS zero-shot 参考音频路径、参考文本、语言、切分方式
+- AI Provider：本地 JSON、豆包、豆包 Coding Plan、Qwen 本地、OpenAI Compatible
+- AI Base URL、API Key、模型、max tokens、temperature、thinking token、system prompt
+- 微信 iLink：启用、Base URL、Token、Account ID、会话 ID、分片延迟
+- Discord：启用、Token、代理地址
 
-## API 封装怎么用
+管理端保存后的配置写入浏览器 `localStorage`。如果你改了 `data/*.json` 但页面仍显示旧配置，清理浏览器 localStorage 或点管理端里的恢复默认项即可。
 
-所有数据读取都在 `src/api/`：
+## AI 配置
 
-```ts
-api.getSpots()
-api.getDashboard()
-api.recommendRoutes('历史文化')
-api.chat({ text: '灵山大佛有什么文化意义？', interest: '历史文化' })
-api.getAvatar()
-api.saveAvatar(config)
-api.getTTSConfig()
-api.saveTTSConfig(config)
-```
-
-其中：
-
-- `getSpots/getDashboard/getAvatar/getTTSConfig` 会 axios 读取对应 JSON。
-- `chat` 不再请求后端，而是在前端根据 `spots.json` 和 `routes.json` 做本地检索并生成演示回答。
-- `saveAvatar/saveTTSConfig/saveAIConfig` 写入 `localStorage`，不修改 JSON 文件本身。
-
-`src/api/http.ts` 是官方 axios 的统一实例，暴露 `apiGet` 和 `apiPost`。以后接真实后端时，可以在这里统一配置：
-
-```ts
-export const http = axios.create({
-  baseURL: 'https://your-api.example.com',
-  timeout: 30000
-})
-```
-
-这也是现在把获取数据方式集中进 `src/api/` 的原因：以后接真实后端时，优先改 `src/api/index.ts` 的 URL 和 `src/api/http.ts` 的请求实现。
-
-## 数据来源
-
-当前 `data/spots.json` 和 `data/dashboard.json` 已经整理自你提供的示范景区公开资料包：
+默认配置在：
 
 ```text
-/Users/mac/Downloads/示范景区公开资料包
+data/ai-config.json
 ```
 
-项目不再保留 docx/xlsx 处理脚本。如果以后要换资料，直接把整理后的结果写入：
+迁入了 `ai-live2d-go/electron/ai.config.ts` 的多 Provider 思路：
 
-```text
-data/spots.json
-data/dashboard.json
-```
+- `activeProvider`：当前启用的 provider key
+- `providers`：各服务商配置
+- `thinkingBudgetTokens`：推理模型 thinking token 上限
+- `enabledToolsets`：保留字段，给后续 Agent/工具系统使用
+- `extraParams`：保留字段，可给不同服务商透传自定义参数
 
-这样其他人拿到项目后不需要本地资料包，也不需要跑数据转换。
+当前项目仍是纯前端本地 JSON 问答，不会直接把 API Key 发给真实大模型。后续接后端时，可以让后端读取管理端保存的 AI 配置，再调用真实 LLM。
 
-## Live2D 数字人
+## TTS 配置
 
-Live2D 默认使用 [luckui/ai-live2d-go](https://github.com/luckui/ai-live2d-go) 的 Hiyori 模型，通过 jsDelivr 加载。
-
-关键配置在：
-
-```text
-data/avatar-config.json
-```
-
-默认加载顺序：
-
-```text
-live2dcubismcore.js
-pixi.js
-pixi-live2d-display/dist/cubism4.min.js
-hiyori_pro_t11.model3.json
-```
-
-Hiyori 是 Cubism 4 模型，所以 runtime 要用：
-
-```text
-https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js
-```
-
-如果 CDN 访问失败，界面会自动回退到内置 2D fallback 数字人。
-
-## GPT-SoVITS V2ProPlus Zero-Shot TTS
-
-默认不开启本地 TTS：
-
-```json
-{
-  "enabled": false
-}
-```
-
-这时项目直接使用浏览器内置中文语音，方便演示。
-
-如果你要接 GPT-SoVITS V2ProPlus zero-shot，改：
+默认配置在：
 
 ```text
 data/tts-config.json
 ```
 
-需要配置这些字段：
+迁入了 `ai-live2d-go/electron/tts.config.ts` 的多 Provider 思路，并保留你要的 GPT-SoVITS V2ProPlus zero-shot：
 
-```json
-{
-  "enabled": true,
-  "provider": "gpt-sovits-v2-pro-plus",
-  "baseUrl": "http://localhost:9880",
-  "apiPath": "/tts",
-  "language": "zh",
-  "gptSoVits": {
-    "textLang": "zh",
-    "promptLang": "zh",
-    "refAudioPath": "/absolute/path/to/reference.wav",
-    "promptText": "这里填写参考音频里一字不差的文字。",
-    "mediaType": "wav",
-    "textSplitMethod": "cut5"
-  }
-}
-```
+- `gpt_sovits_zero_shot`：GPT-SoVITS V2ProPlus
+- `local_edge_tts`：Edge-TTS 本地服务
+- `local_moss_nano`：MOSS-TTS-Nano 本地服务
 
-你需要自己准备：
-
-- GPT-SoVITS V2ProPlus 服务
-- 一个 3-10 秒参考音频，推荐 wav
-- `promptText`，必须和参考音频内容尽量一字不差
-- ffmpeg
-
-macOS 安装 ffmpeg：
-
-```bash
-brew install ffmpeg
-```
-
-Windows 到 [FFmpeg 官网](https://ffmpeg.org/download.html) 下载，并把 `ffmpeg` 加到系统 `PATH`。
-
-注意：现在没有后端代理，浏览器会直接请求：
+浏览器会直接请求当前 provider 的：
 
 ```text
 POST ${baseUrl}${apiPath}
 ```
 
-所以 GPT-SoVITS 服务需要允许浏览器跨域请求。如果遇到 CORS 报错，需要在 GPT-SoVITS 服务侧允许 `http://localhost:5173`，或者你后续自己加一个很薄的代理服务。
+所以 TTS 服务需要允许浏览器跨域访问。GPT-SoVITS zero-shot 至少要配置：
 
-`refAudioPath` 也要填 GPT-SoVITS 服务能访问到的路径。最稳妥是填绝对路径。
+- `refAudioPath`：GPT-SoVITS 服务能访问到的参考音频路径
+- `promptText`：参考音频逐字文本
+- `textLang` / `promptLang`：中文一般填 `zh`
+- `mediaType`：推荐 `wav`
 
-## 已删除的旧东西
+如果 TTS 失败，项目会自动回退到浏览器内置语音。
 
-这些都不再需要：
+## Live2D 模型
 
-- `mock-server/`：Express mock API
-- `scripts/prepare-data.mjs`：docx/xlsx 数据处理脚本
-- `scripts/load-env.mjs`：后端环境变量加载脚本
-- `source-data/`：原始资料包占位目录
-- `.env.example`：后端时代的环境变量示例
-- 旧版 `src/views/admin/`
-- 旧版 `src/views/VisitorGuide.vue`
+模型资源已复制到：
 
-现在项目只需要：
-
-```bash
-npm install
-npm run dev
+```text
+public/live2d/
 ```
 
-## 常见问题
+默认使用本地 Hiyori Pro：
 
-### 为什么没有 `npm run dev:all`
-
-因为已经没有后端了，只需要：
-
-```bash
-npm run dev
+```json
+{
+  "assetBase": "/live2d",
+  "modelUrl": "Resources/Hiyori_pro/hiyori_pro_t11.model3.json",
+  "coreUrl": "Core/live2dcubismcore.js"
+}
 ```
 
-### 为什么 JSON 改了页面没变化
+Hiyori 是 Cubism 4 模型，runtime 已放到本地：
 
-管理端保存过的配置会优先读 `localStorage`。如果你想重新使用 `data/*.json` 默认值，清理浏览器 localStorage 即可。
+```text
+/live2d/vendor/pixi.min.js
+/live2d/vendor/cubism4.min.js
+```
 
-### 为什么 TTS 没声音
+如果 Live2D 加载失败，界面会自动显示内置 2D fallback 数字人。
 
-先保持 `data/tts-config.json` 里的 `enabled=false`，确认浏览器语音正常。再打开 GPT-SoVITS，并确认：
+## 微信桥接
 
-- `baseUrl` 正确
-- `apiPath` 是 `/tts`
-- `refAudioPath` 是 GPT-SoVITS 能访问的路径
-- `promptText` 和参考音频内容对应
-- GPT-SoVITS 服务允许浏览器跨域访问
+默认配置在：
 
-### 为什么 Live2D 不显示
+```text
+data/bridge-config.json
+```
 
-优先看浏览器控制台。如果是 CDN 访问失败，可以把 Live2D 资源下载到本地，再改 `data/avatar-config.json` 里的 `assetBase/modelUrl/coreUrl`。
+迁入自 `ai-live2d-go/electron/bridges/bridge.config.ts` 的配置字段：
+
+- `wechat.enabled`
+- `wechat.token`
+- `wechat.accountId`
+- `wechat.baseUrl`
+- `wechat.conversationId`
+- `wechat.sendChunkDelay`
+
+当前纯前端项目不会直接调用微信 iLink，也不会保存 token 到服务器。管理端只是把配置保存在浏览器 localStorage，方便后续真实后端或桌面桥接服务读取。
+
+## 接真实后端
+
+后续接后端时，优先改：
+
+```text
+src/api/http.ts
+src/api/index.ts
+src/api/tts.ts
+```
+
+现在页面和 store 只调用 `src/api/` 暴露的方法，不直接关心数据来自 JSON、localStorage 还是真实接口。

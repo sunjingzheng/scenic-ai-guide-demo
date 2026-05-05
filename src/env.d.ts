@@ -65,7 +65,7 @@ interface Window {
   webkitAudioContext?: typeof AudioContext
   SpeechRecognition?: SpeechRecognitionConstructor
   webkitSpeechRecognition?: SpeechRecognitionConstructor
-  __live2dAvatarMounted?: boolean
+  __live2dAvatarActiveId?: symbol
   __live2dGetModel?: () => {
     _wavFileHandler?: {
       startFromBuffer(buffer: ArrayBuffer): Promise<void>

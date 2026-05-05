@@ -47,6 +47,9 @@ export type ProviderConfig = {
   model: string
   maxTokens?: number
   temperature?: number
+  thinkingBudgetTokens?: number
+  enabledToolsets?: string[]
+  extraParams?: Record<string, unknown>
   systemPrompt?: string
 }
 
@@ -58,11 +61,14 @@ export type RuntimeAIConfig = {
 
 export type TTSConfig = {
   enabled: boolean
+  activeProvider?: string
   provider?: string
   baseUrl: string
   apiPath?: string
+  apiKey?: string
   speaker: string
   language: string
+  providers?: Record<string, TTSProviderConfig>
   gptSoVits?: {
     textLang: string
     promptLang: string
@@ -84,6 +90,29 @@ export type TTSConfig = {
   }
 }
 
+export type VoicePresetItem = {
+  id: string
+  name: string
+  description: string
+  refAudioFile?: string
+}
+
+export type TTSProviderConfig = {
+  type: 'http-tts'
+  name: string
+  engine?: string
+  baseUrl: string
+  apiPath?: string
+  apiKey?: string
+  speaker: string
+  language: string
+  isLocal?: boolean
+  localEngine?: string
+  speakerMode?: 'text' | 'preset'
+  voicePresets?: VoicePresetItem[]
+  gptSoVits?: TTSConfig['gptSoVits']
+}
+
 export type TTSStatus = {
   enabled: boolean
   healthy: boolean
@@ -99,6 +128,37 @@ export type Live2DConfig = {
   coreUrl: string
   pixiUrl: string
   runtimeUrl: string
+  modelPreset?: string
+  models?: Live2DModelPreset[]
+}
+
+export type Live2DModelPreset = {
+  id: string
+  name: string
+  assetBase: string
+  modelUrl: string
+  coreUrl: string
+  motionIdle?: string
+  motionTap?: string
+  hitBody?: string
+}
+
+export type BridgeConfig = {
+  wechat: {
+    enabled: boolean
+    token: string
+    accountId: string
+    baseUrl: string
+    conversationId: string
+    sendChunkDelay: number
+  }
+  discord: {
+    enabled: boolean
+    token: string
+    allowedChannels: string[]
+    conversationId: string
+    proxyUrl: string
+  }
 }
 
 export type DashboardOverview = {
@@ -117,6 +177,9 @@ export type AvatarConfig = {
   voice: string
   expressionLevel: number
   culturalTheme: string
+  defaultEmotion?: string
+  autoGreeting?: boolean
+  greetingText?: string
   voiceEnabled?: boolean
   voiceSpeed?: number
   ttsSpeaker?: string
