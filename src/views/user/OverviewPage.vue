@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useGuideStore } from '../../stores/useGuideStore'
-import { MapPin, Clock, Star, Navigation } from 'lucide-vue-next'
+import { MapPin, Clock, Star, Navigation, Landmark, Search } from 'lucide-vue-next'
 
 const store = useGuideStore()
 const selectedArea = ref<string>('all')
@@ -9,7 +9,7 @@ const searchQuery = ref('')
 
 const scenicAreas = [
   { id: 'all', name: '全部景区', color: 'emerald' },
-  { id: '灵山大佛景区', name: '灵山大佛景区', color: 'green' },
+  { id: '灵山大佛景区', name: '大佛景区', color: 'green' },
   { id: '九龙灌浴景区', name: '九龙灌浴景区', color: 'teal' },
   { id: '拈花湾景区', name: '拈花湾景区', color: 'lime' }
 ]
@@ -38,8 +38,13 @@ onMounted(() => {
 })
 
 function viewSpotDetail(spotId: string) {
-  // 导航到景点详情页
   console.log('View spot:', spotId)
+}
+
+const areaGradients: Record<string, string> = {
+  '灵山大佛景区': 'linear-gradient(135deg, #d4edda, #c3e6cb)',
+  '九龙灌浴景区': 'linear-gradient(135deg, #d1ecf1, #bee5eb)',
+  '拈花湾景区': 'linear-gradient(135deg, #fff3cd, #ffeaa7)'
 }
 </script>
 
@@ -53,12 +58,15 @@ function viewSpotDetail(spotId: string) {
       </div>
 
       <div class="search-controls">
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="input search-input"
-          placeholder="搜索景点名称、特色..."
-        />
+        <div class="search-wrapper">
+          <Search :size="18" class="search-icon" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="input search-input"
+            placeholder="搜索景点名称、特色..."
+          />
+        </div>
 
         <div class="area-filters">
           <button
@@ -77,21 +85,22 @@ function viewSpotDetail(spotId: string) {
     <!-- 景点网格 -->
     <section class="spots-grid">
       <div
-        v-for="spot in filteredSpots"
+        v-for="(spot, idx) in filteredSpots"
         :key="spot.id"
         class="spot-card glass-card"
+        :style="{ animationDelay: `${idx * 0.06}s` }"
         @click="viewSpotDetail(spot.id)"
       >
         <div class="spot-header">
           <div class="spot-badge">{{ spot.scenicArea }}</div>
           <div class="spot-rating">
-            <Star :size="16" fill="currentColor" />
+            <Star :size="14" fill="currentColor" />
             <span>4.8</span>
           </div>
         </div>
 
-        <div class="spot-image">
-          <div class="spot-icon">🏛️</div>
+        <div class="spot-image" :style="{ background: areaGradients[spot.scenicArea] || 'linear-gradient(135deg, var(--primary-100), var(--primary-200))' }">
+          <Landmark :size="48" stroke-width="1.5" class="spot-icon-svg" />
         </div>
 
         <div class="spot-content">
@@ -115,7 +124,9 @@ function viewSpotDetail(spotId: string) {
 
     <!-- 空状态 -->
     <div v-if="filteredSpots.length === 0" class="empty-state">
-      <MapPin :size="64" />
+      <div class="empty-icon-wrapper">
+        <MapPin :size="48" />
+      </div>
       <h3>未找到相关景点</h3>
       <p>尝试调整搜索条件或筛选项</p>
     </div>
@@ -157,9 +168,24 @@ function viewSpotDetail(spotId: string) {
   gap: var(--spacing-md);
 }
 
+.search-wrapper {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
 .search-input {
-  font-size: 1rem;
-  padding: var(--spacing-md);
+  font-size: 0.95rem;
+  padding: 12px 14px 12px 44px;
+  width: 100%;
+  max-width: 420px;
 }
 
 .area-filters {
@@ -182,6 +208,7 @@ function viewSpotDetail(spotId: string) {
 .filter-btn:hover {
   border-color: var(--primary-300);
   background: var(--primary-50);
+  color: var(--primary-600);
 }
 
 .filter-btn.active {
@@ -215,6 +242,18 @@ function viewSpotDetail(spotId: string) {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  animation: spot-entrance 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes spot-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .spot-header {
@@ -224,7 +263,7 @@ function viewSpotDetail(spotId: string) {
 }
 
 .spot-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   padding: 0.25rem 0.75rem;
   background: var(--primary-100);
   color: var(--primary-700);
@@ -244,15 +283,21 @@ function viewSpotDetail(spotId: string) {
 .spot-image {
   width: 100%;
   height: 180px;
-  background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform var(--transition-base);
+  overflow: hidden;
 }
 
-.spot-icon {
-  font-size: 4rem;
+.spot-card:hover .spot-image {
+  transform: scale(1.02);
+}
+
+.spot-icon-svg {
+  color: var(--primary-500);
+  opacity: 0.6;
 }
 
 .spot-content {
@@ -262,18 +307,18 @@ function viewSpotDetail(spotId: string) {
 }
 
 .spot-content h3 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .spot-id {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-tertiary);
 }
 
 .spot-description {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
   line-height: 1.6;
   display: -webkit-box;
@@ -299,16 +344,27 @@ function viewSpotDetail(spotId: string) {
   color: var(--text-secondary);
 }
 
+.meta-item svg {
+  color: var(--primary-500);
+  flex-shrink: 0;
+}
+
 /* 空状态 */
 .empty-state {
   text-align: center;
-  padding: var(--spacing-2xl);
-  color: var(--text-secondary);
+  padding: var(--spacing-3xl) var(--spacing-2xl);
 }
 
-.empty-state svg {
+.empty-icon-wrapper {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto var(--spacing-lg);
+  border-radius: 50%;
+  background: var(--primary-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--primary-300);
-  margin-bottom: var(--spacing-md);
 }
 
 .empty-state h3 {
@@ -317,9 +373,22 @@ function viewSpotDetail(spotId: string) {
   margin-bottom: var(--spacing-xs);
 }
 
+.empty-state p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
+  .overview-page {
+    padding: var(--spacing-md);
+  }
+
   .spots-grid {
     grid-template-columns: 1fr;
+  }
+
+  .search-input {
+    max-width: 100%;
   }
 }
 </style>

@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useGuideStore } from '../../stores/useGuideStore'
-import { Clock, MapPin, Users, Heart, Navigation } from 'lucide-vue-next'
+import { Clock, MapPin, Heart, Navigation, Lightbulb, Landmark, Mountain, Sun, Baby, History } from 'lucide-vue-next'
 
 const store = useGuideStore()
 const selectedInterest = ref<string>('all')
 
 const interests = [
-  { id: 'all', name: '全部路线', icon: '🗺️' },
-  { id: '历史文化', name: '历史文化', icon: '🏛️' },
-  { id: '祈福朝圣', name: '祈福朝圣', icon: '🙏' },
-  { id: '自然风光', name: '自然风光', icon: '🌿' },
-  { id: '亲子休闲', name: '亲子休闲', icon: '👨‍👩‍👧' }
+  { id: 'all', name: '全部路线', icon: MapPin },
+  { id: '历史文化', name: '历史文化', icon: History },
+  { id: '祈福朝圣', name: '祈福朝圣', icon: Sun },
+  { id: '自然风光', name: '自然风光', icon: Mountain },
+  { id: '亲子休闲', name: '亲子休闲', icon: Baby }
 ]
 
 const routeTemplates = ref([
@@ -102,7 +102,6 @@ onMounted(() => {
 
 function selectRoute(routeId: string) {
   console.log('Selected route:', routeId)
-  // 可以导航到详细页面或开始导航
 }
 </script>
 
@@ -124,7 +123,7 @@ function selectRoute(routeId: string) {
           :class="{ active: selectedInterest === interest.id }"
           @click="selectedInterest = interest.id"
         >
-          <span class="interest-icon">{{ interest.icon }}</span>
+          <component :is="interest.icon" :size="16" />
           <span>{{ interest.name }}</span>
         </button>
       </div>
@@ -133,9 +132,10 @@ function selectRoute(routeId: string) {
     <!-- 路线列表 -->
     <section class="routes-list">
       <div
-        v-for="route in filteredRoutes"
+        v-for="(route, idx) in filteredRoutes"
         :key="route.id"
         class="route-card glass-card"
+        :style="{ animationDelay: `${idx * 0.08}s` }"
         @click="selectRoute(route.id)"
       >
         <div class="route-header">
@@ -164,7 +164,7 @@ function selectRoute(routeId: string) {
             <span>{{ route.stops.length }} 个景点</span>
           </div>
           <div class="meta-item">
-            <Users :size="16" />
+            <History :size="16" />
             <span>{{ route.bestTime }}</span>
           </div>
         </div>
@@ -192,7 +192,7 @@ function selectRoute(routeId: string) {
         </div>
 
         <div class="route-tips">
-          <span class="tips-icon">💡</span>
+          <Lightbulb :size="16" class="tips-svg" />
           <span>{{ route.tips }}</span>
         </div>
       </div>
@@ -253,16 +253,13 @@ function selectRoute(routeId: string) {
 .interest-btn:hover {
   border-color: var(--primary-300);
   background: var(--primary-50);
+  color: var(--primary-600);
 }
 
 .interest-btn.active {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   color: white;
   border-color: transparent;
-}
-
-.interest-icon {
-  font-size: 1.25rem;
 }
 
 /* 路线列表 */
@@ -278,6 +275,18 @@ function selectRoute(routeId: string) {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  animation: route-entrance 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes route-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .route-header {
@@ -288,7 +297,7 @@ function selectRoute(routeId: string) {
 }
 
 .route-header h3 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--spacing-xs);
@@ -317,7 +326,7 @@ function selectRoute(routeId: string) {
 }
 
 .route-summary {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   line-height: 1.6;
 }
@@ -335,11 +344,12 @@ function selectRoute(routeId: string) {
   align-items: center;
   gap: var(--spacing-xs);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 
 .meta-item svg {
   color: var(--primary-600);
+  flex-shrink: 0;
 }
 
 /* 路线站点 */
@@ -350,7 +360,7 @@ function selectRoute(routeId: string) {
 }
 
 .stops-label {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--spacing-sm);
@@ -361,13 +371,14 @@ function selectRoute(routeId: string) {
   flex-wrap: wrap;
   gap: var(--spacing-xs);
   align-items: center;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
 .stops-flow .arrow {
   color: var(--primary-500);
   margin: 0 var(--spacing-xs);
+  font-weight: 600;
 }
 
 /* 亮点推荐 */
@@ -381,7 +392,7 @@ function selectRoute(routeId: string) {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -412,15 +423,20 @@ function selectRoute(routeId: string) {
   padding: var(--spacing-md);
   background: linear-gradient(135deg, var(--primary-50), var(--primary-100));
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
-.tips-icon {
-  font-size: 1.25rem;
+.tips-svg {
+  color: var(--warning);
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
+  .routes-page {
+    padding: var(--spacing-md);
+  }
+
   .route-header {
     flex-direction: column;
   }

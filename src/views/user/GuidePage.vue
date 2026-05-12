@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { Mic, Send, X, Minimize2, Maximize2 } from 'lucide-vue-next'
+import { ref, onMounted, nextTick } from 'vue'
+import { Mic, Send, X, Minimize2, Maximize2, Bot } from 'lucide-vue-next'
 import { useGuideStore } from '../../stores/useGuideStore'
 import AvatarGuide from '../../components/AvatarGuide.vue'
 
@@ -9,6 +9,7 @@ const input = ref('')
 const isExpanded = ref(false)
 const isMinimized = ref(false)
 const recognitionState = ref<'idle' | 'listening' | 'unsupported'>('idle')
+const messagesContainer = ref<HTMLElement | null>(null)
 
 const quickQuestions = [
   '灵山大佛有什么特色？',
@@ -28,6 +29,15 @@ function submit(text = input.value) {
   store.ask(value)
   if (!isExpanded.value) {
     isExpanded.value = true
+  }
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
+function scrollToBottom() {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
   }
 }
 
@@ -60,6 +70,9 @@ function startVoice() {
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
+  if (isExpanded.value) {
+    nextTick(() => scrollToBottom())
+  }
 }
 
 function toggleMinimize() {
@@ -87,18 +100,21 @@ function toggleMinimize() {
         <!-- 头部 -->
         <div class="assistant-header">
           <div class="header-info">
-            <h3>AI数字导员</h3>
-            <span :class="{ active: store.speaking }">
-              {{ store.speaking ? '正在讲解' : '在线服务' }}
-            </span>
+            <Bot :size="20" class="header-bot-icon" />
+            <div>
+              <h3>AI数字导员</h3>
+              <span :class="{ active: store.speaking }">
+                {{ store.speaking ? '正在讲解' : '在线服务' }}
+              </span>
+            </div>
           </div>
           <div class="header-actions">
             <button class="icon-btn" @click="toggleExpand" :title="isExpanded ? '收起' : '展开'">
-              <Minimize2 v-if="isExpanded" :size="18" />
-              <Maximize2 v-else :size="18" />
+              <Minimize2 v-if="isExpanded" :size="16" />
+              <Maximize2 v-else :size="16" />
             </button>
             <button class="icon-btn" @click="toggleMinimize" title="最小化">
-              <X :size="18" />
+              <X :size="16" />
             </button>
           </div>
         </div>
@@ -119,20 +135,32 @@ function toggleMinimize() {
 
         <!-- 展开的对话区域 -->
         <div v-if="isExpanded" class="chat-section">
-          <div class="messages-container">
+          <div ref="messagesContainer" class="messages-container">
             <div
               v-for="(message, index) in store.messages"
               :key="index"
               class="message"
               :class="message.role"
             >
-              <p>{{ message.text }}</p>
-              <small v-if="message.references?.length">
-                引用：{{ message.references.map(s => s.name).join('、') }}
-              </small>
+              <div v-if="message.role === 'assistant'" class="message-avatar">
+                <Bot :size="14" />
+              </div>
+              <div class="message-content">
+                <p>{{ message.text }}</p>
+                <small v-if="message.references?.length">
+                  引用：{{ message.references.map(s => s.name).join('、') }}
+                </small>
+              </div>
             </div>
             <div v-if="store.loading" class="message assistant loading">
-              <p>正在思考...</p>
+              <div class="message-avatar">
+                <Bot :size="14" />
+              </div>
+              <div class="message-content">
+                <div class="typing-indicator">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -165,7 +193,7 @@ function toggleMinimize() {
             placeholder="问我任何关于景区的问题..."
             @keyup.enter="submit()"
           />
-          <button class="btn btn-primary" @click="submit()">
+          <button class="btn btn-primary send-btn" :disabled="!input.trim()" @click="submit()">
             <Send :size="18" />
           </button>
         </div>
@@ -191,20 +219,24 @@ function toggleMinimize() {
 
 /* 最小化状态 */
 .minimized-avatar {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  padding: 4px;
+  padding: 3px;
   cursor: pointer;
   position: relative;
   box-shadow: var(--shadow-green);
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .minimized-avatar:hover {
-  transform: scale(1.1);
+  transform: scale(1.08);
   box-shadow: var(--shadow-xl);
+}
+
+.minimized-avatar:active {
+  transform: scale(0.95);
 }
 
 .pulse-ring {
@@ -236,6 +268,18 @@ function toggleMinimize() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: assistant-entrance 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes assistant-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .floating-assistant.expanded .assistant-container {
@@ -248,19 +292,34 @@ function toggleMinimize() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--border-light);
 }
 
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.header-bot-icon {
+  color: var(--primary-600);
+  background: var(--primary-100);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+}
+
 .header-info h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .header-info span {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
 }
 
@@ -316,16 +375,16 @@ function toggleMinimize() {
 }
 
 .avatar-status span.pulse {
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: status-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes status-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
 }
 
 .avatar-status p {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
@@ -344,40 +403,118 @@ function toggleMinimize() {
   padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
 .message {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-lg);
-  max-width: 85%;
+  display: flex;
+  gap: var(--spacing-sm);
+  max-width: 90%;
+  animation: message-entrance 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes message-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message.user {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.message.assistant .message-avatar {
+  background: var(--primary-100);
+  color: var(--primary-600);
+}
+
+.message.user .message-avatar {
+  background: var(--primary-600);
   color: white;
 }
 
-.message.assistant {
-  align-self: flex-start;
+.message-content {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.message.user .message-content {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant .message-content {
   background: var(--gray-100);
   color: var(--text-primary);
+  border-bottom-left-radius: 4px;
 }
 
 .message.loading {
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .message p {
-  font-size: 0.875rem;
-  line-height: 1.5;
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
 .message small {
+  display: block;
+  margin-top: 6px;
   font-size: 0.75rem;
-  opacity: 0.8;
+  opacity: 0.75;
+}
+
+/* 打字指示器 */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-indicator span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 
 /* 快捷问题 */
@@ -410,28 +547,40 @@ function toggleMinimize() {
 .input-section {
   display: flex;
   gap: var(--spacing-xs);
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-top: 1px solid var(--border-light);
   background: var(--bg-primary);
+  align-items: center;
 }
 
 .voice-btn.listening {
   color: var(--error);
-  animation: pulse 1s ease-in-out infinite;
+  animation: status-pulse 1s ease-in-out infinite;
 }
 
 .input-section .input {
   flex: 1;
   border: 1px solid var(--border-light);
-  padding: var(--spacing-sm);
+  padding: 10px 14px;
   font-size: 0.875rem;
+}
+
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
   .assistant-container,
   .floating-assistant.expanded .assistant-container {
-    width: calc(100vw - 48px);
+    width: calc(100vw - 32px);
     max-height: calc(100vh - 100px);
+    right: 16px;
+  }
+
+  .floating-assistant {
+    right: 16px;
+    bottom: 80px;
   }
 }
 </style>

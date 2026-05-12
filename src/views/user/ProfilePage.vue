@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { User, Mail, Phone, MapPin, Calendar, Heart, Clock, Award } from 'lucide-vue-next'
+import { User, Mail, Phone, MapPin, Calendar, Heart, Clock, Award, LogOut, Edit3 } from 'lucide-vue-next'
 
 const userInfo = ref({
   name: '游客',
-  avatar: '👤',
   email: 'visitor@example.com',
   phone: '138****8888',
   memberLevel: '普通会员',
@@ -40,26 +39,31 @@ function logout() {
     <section class="profile-card glass-card">
       <div class="profile-header">
         <div class="avatar-section">
-          <div class="avatar-circle">{{ userInfo.avatar }}</div>
+          <div class="avatar-circle">
+            <User :size="36" />
+          </div>
           <div class="user-info">
             <h2>{{ userInfo.name }}</h2>
             <span class="member-badge">{{ userInfo.memberLevel }}</span>
           </div>
         </div>
-        <button class="btn btn-secondary" @click="editProfile">编辑资料</button>
+        <button class="btn btn-secondary edit-btn" @click="editProfile">
+          <Edit3 :size="16" />
+          编辑资料
+        </button>
       </div>
 
       <div class="profile-details">
         <div class="detail-item">
-          <Mail :size="18" />
+          <Mail :size="16" />
           <span>{{ userInfo.email }}</span>
         </div>
         <div class="detail-item">
-          <Phone :size="18" />
+          <Phone :size="16" />
           <span>{{ userInfo.phone }}</span>
         </div>
         <div class="detail-item">
-          <Calendar :size="18" />
+          <Calendar :size="16" />
           <span>加入时间：{{ userInfo.joinDate }}</span>
         </div>
       </div>
@@ -73,7 +77,7 @@ function logout() {
         class="stat-card glass-card"
       >
         <div class="stat-icon" :class="`bg-${stat.color}`">
-          <component :is="stat.icon" :size="24" />
+          <component :is="stat.icon" :size="22" />
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stat.value }}</div>
@@ -86,7 +90,7 @@ function logout() {
     <section class="favorites-section glass-card">
       <div class="section-header">
         <h3>
-          <Heart :size="20" />
+          <Heart :size="18" />
           我的收藏
         </h3>
       </div>
@@ -96,7 +100,7 @@ function logout() {
           :key="spot"
           class="favorite-item"
         >
-          <span class="spot-icon">📍</span>
+          <MapPin :size="14" class="favorite-icon" />
           <span>{{ spot }}</span>
         </div>
       </div>
@@ -106,7 +110,7 @@ function logout() {
     <section class="history-section glass-card">
       <div class="section-header">
         <h3>
-          <Clock :size="20" />
+          <Clock :size="18" />
           游览历史
         </h3>
       </div>
@@ -117,7 +121,7 @@ function logout() {
           class="history-item"
         >
           <div class="history-date">
-            <Calendar :size="16" />
+            <Calendar :size="14" />
             <span>{{ visit.date }}</span>
           </div>
           <div class="history-spots">
@@ -126,7 +130,7 @@ function logout() {
             </span>
           </div>
           <div class="history-duration">
-            <Clock :size="14" />
+            <Clock :size="12" />
             <span>{{ visit.duration }}</span>
           </div>
         </div>
@@ -136,6 +140,7 @@ function logout() {
     <!-- 退出登录 -->
     <section class="actions-section">
       <button class="btn btn-ghost logout-btn" @click="logout">
+        <LogOut :size="16" />
         退出登录
       </button>
     </section>
@@ -161,7 +166,7 @@ function logout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
   padding-bottom: var(--spacing-lg);
   border-bottom: 1px solid var(--border-light);
 }
@@ -173,19 +178,19 @@ function logout() {
 }
 
 .avatar-circle {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  color: white;
   box-shadow: var(--shadow-green);
 }
 
 .user-info h2 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--spacing-xs);
@@ -193,7 +198,7 @@ function logout() {
 
 .member-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.2rem 0.75rem;
   background: var(--primary-100);
   color: var(--primary-700);
   border-radius: var(--radius-full);
@@ -201,10 +206,16 @@ function logout() {
   font-weight: 500;
 }
 
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
 .profile-details {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .detail-item {
@@ -217,12 +228,13 @@ function logout() {
 
 .detail-item svg {
   color: var(--primary-600);
+  flex-shrink: 0;
 }
 
 /* 统计数据 */
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-md);
 }
 
@@ -234,13 +246,14 @@ function logout() {
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
 }
 
 .bg-emerald { background: linear-gradient(135deg, #10b981, #059669); }
@@ -251,17 +264,17 @@ function logout() {
 .stat-content {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
@@ -281,7 +294,7 @@ function logout() {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -306,10 +319,18 @@ function logout() {
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-.spot-icon {
-  font-size: 1.25rem;
+.favorite-item:hover {
+  background: var(--primary-100);
+  border-color: var(--primary-300);
+}
+
+.favorite-icon {
+  color: var(--primary-500);
+  flex-shrink: 0;
 }
 
 /* 游览历史 */
@@ -324,8 +345,9 @@ function logout() {
   background: var(--bg-tertiary);
   border-radius: var(--radius-lg);
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
 }
 
 .history-date {
@@ -333,17 +355,19 @@ function logout() {
   align-items: center;
   gap: var(--spacing-xs);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  min-width: 120px;
 }
 
 .history-spots {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
 }
 
 .spot-tag {
-  padding: 0.25rem 0.75rem;
+  padding: 0.2rem 0.75rem;
   background: var(--primary-100);
   color: var(--primary-700);
   border-radius: var(--radius-md);
@@ -356,6 +380,7 @@ function logout() {
   gap: var(--spacing-xs);
   color: var(--text-tertiary);
   font-size: 0.75rem;
+  margin-left: auto;
 }
 
 /* 操作区域 */
@@ -365,22 +390,40 @@ function logout() {
 }
 
 .logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   color: var(--error);
+  padding: var(--spacing-sm) var(--spacing-xl);
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.08);
   color: var(--error);
 }
 
 @media (max-width: 768px) {
+  .profile-page {
+    padding: var(--spacing-md);
+  }
+
   .profile-header {
     flex-direction: column;
     gap: var(--spacing-md);
+    align-items: flex-start;
   }
 
   .stats-section {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .history-duration {
+    margin-left: 0;
   }
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Compass, Map, MessageCircle, Route, User } from 'lucide-vue-next'
+import { Compass, Map, MessageCircle, Route, Landmark, Sparkles } from 'lucide-vue-next'
 
 const router = useRouter()
 const features = [
@@ -48,10 +48,14 @@ const stats = ref([
     <!-- 顶部横幅 -->
     <section class="hero-section">
       <div class="hero-content">
+        <div class="hero-badge">
+          <Sparkles :size="14" />
+          <span>AI 智能导览系统</span>
+        </div>
         <h1 class="hero-title">
           <span class="gradient-text">灵山胜境</span>
           <br />
-          AI智能导览系统
+          智慧文旅新体验
         </h1>
         <p class="hero-subtitle">
           融合人工智能与文化传承，为您提供沉浸式的智慧旅游体验
@@ -68,11 +72,15 @@ const stats = ref([
         </div>
       </div>
       <div class="hero-image">
+        <div class="hero-deco-circle deco-1"></div>
+        <div class="hero-deco-circle deco-2"></div>
         <div class="floating-card">
-          <div class="card-icon">🏛️</div>
+          <div class="card-icon-wrapper">
+            <Landmark :size="40" stroke-width="1.5" />
+          </div>
           <div class="card-text">
             <strong>灵山大佛</strong>
-            <span>核心景点</span>
+            <span>核心景点 · 必游之地</span>
           </div>
         </div>
       </div>
@@ -83,9 +91,10 @@ const stats = ref([
       <h2 class="section-title">探索功能</h2>
       <div class="features-grid">
         <div
-          v-for="feature in features"
+          v-for="(feature, idx) in features"
           :key="feature.route"
           class="feature-card glass-card"
+          :style="{ animationDelay: `${idx * 0.1}s` }"
           @click="router.push(feature.route)"
         >
           <div class="feature-icon" :class="`bg-${feature.color}`">
@@ -132,10 +141,27 @@ const stats = ref([
   gap: var(--spacing-lg);
 }
 
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-700);
+  width: fit-content;
+}
+
+.hero-badge svg {
+  color: var(--primary-500);
+}
+
 .hero-title {
   font-size: 3.5rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 
@@ -147,15 +173,16 @@ const stats = ref([
 }
 
 .hero-subtitle {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 520px;
 }
 
 .hero-actions {
   display: flex;
   gap: var(--spacing-md);
-  margin-top: var(--spacing-lg);
+  margin-top: var(--spacing-md);
 }
 
 .btn-lg {
@@ -163,34 +190,73 @@ const stats = ref([
   font-size: 1rem;
 }
 
+/* Hero decoration */
 .hero-image {
   position: relative;
-  height: 400px;
+  height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.hero-deco-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.deco-1 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(50, 143, 98, 0.08), transparent 70%);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.deco-2 {
+  width: 200px;
+  height: 200px;
+  border: 1px solid rgba(50, 143, 98, 0.12);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-glow 4s ease-in-out 1s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
 .floating-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  box-shadow: var(--shadow-green);
+  gap: var(--spacing-lg);
+  box-shadow: var(--shadow-lg);
   animation: float 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-16px); }
 }
 
-.card-icon {
-  font-size: 3rem;
+.card-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-600);
+  flex-shrink: 0;
 }
 
 .card-text {
@@ -205,7 +271,7 @@ const stats = ref([
 }
 
 .card-text span {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
@@ -220,11 +286,22 @@ const stats = ref([
   text-align: center;
   margin-bottom: var(--spacing-xl);
   color: var(--text-primary);
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-400), var(--accent-teal));
+  border-radius: 2px;
+  margin: 12px auto 0;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--spacing-lg);
 }
 
@@ -236,6 +313,18 @@ const stats = ref([
   align-items: center;
   text-align: center;
   gap: var(--spacing-md);
+  animation: card-entrance 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .feature-icon {
@@ -247,6 +336,11 @@ const stats = ref([
   justify-content: center;
   color: white;
   margin-bottom: var(--spacing-sm);
+  transition: transform var(--transition-base);
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(-5deg);
 }
 
 .bg-emerald { background: linear-gradient(135deg, #10b981, #059669); }
@@ -268,12 +362,13 @@ const stats = ref([
 
 /* 统计区域 */
 .stats-section {
-  padding: var(--spacing-2xl);
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  animation: card-entrance 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-xl);
 }
 
@@ -289,6 +384,7 @@ const stats = ref([
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-xs);
+  line-height: 1.1;
 }
 
 .stat-label {
@@ -296,17 +392,70 @@ const stats = ref([
   color: var(--text-secondary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 968px) {
   .hero-section {
     grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    min-height: auto;
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
   }
 
   .hero-image {
     height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-page {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .hero-section {
+    min-height: auto;
+  }
+
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .hero-image {
+    height: 260px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .btn-lg {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .deco-1 {
+    width: 240px;
+    height: 240px;
+  }
+
+  .deco-2 {
+    width: 160px;
+    height: 160px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
