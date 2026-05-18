@@ -24,7 +24,7 @@ const defaultLive2DConfig: Live2DConfig = {
   assetBase: '/live2d',
   modelUrl: 'Resources/Hiyori_pro/hiyori_pro_t11.model3.json',
   coreUrl: 'Core/live2dcubismcore.js',
-  pixiUrl: '/live2d/vendor/pixi.min.js',
+  pixiUrl: '/live2d/vendor/pixi-legacy.min.js',
   runtimeUrl: '/live2d/vendor/cubism4.min.js',
   modelPreset: 'hiyori_pro',
   models: [
@@ -263,6 +263,7 @@ function addAIProvider() {
       type: 'openai-compatible',
       name: '自定义 AI',
       baseUrl: 'https://api.example.com/v1',
+      apiPath: '/chat/completions',
       apiKey: '',
       model: 'gpt-4o-mini',
       maxTokens: 1024,
@@ -533,12 +534,29 @@ function ttsProviderValue(key: string) {
                     <a-col :xs="24" :md="8"><a-form-item label="上下文轮数"><a-input-number v-model:value="aiForm.contextWindowRounds" :min="1" :max="20" class="full-width" /></a-form-item></a-col>
                   </a-row>
 
+                  <a-card v-if="aiForm.ragBackend" class="inner-card" :bordered="false">
+                    <template #title>RAG 知识库后端</template>
+                    <a-row :gutter="16">
+                      <a-col :xs="24" :md="8">
+                        <a-form-item label="启用后端知识库">
+                          <a-switch v-model:checked="aiForm.ragBackend.enabled" />
+                        </a-form-item>
+                      </a-col>
+                      <a-col :xs="24" :md="16"><a-form-item label="后端地址"><a-input v-model:value="aiForm.ragBackend.baseUrl" /></a-form-item></a-col>
+                      <a-col :xs="24" :md="8"><a-form-item label="聊天路径"><a-input v-model:value="aiForm.ragBackend.chatPath" /></a-form-item></a-col>
+                      <a-col :xs="24" :md="8"><a-form-item label="流式路径"><a-input v-model:value="aiForm.ragBackend.chatStreamPath" /></a-form-item></a-col>
+                      <a-col :xs="24" :md="8"><a-form-item label="后端模型类型"><a-input v-model:value="aiForm.ragBackend.modelType" /></a-form-item></a-col>
+                      <a-col :xs="24" :md="8"><a-form-item label="后端访问 Token"><a-input-password v-model:value="aiForm.ragBackend.authToken" /></a-form-item></a-col>
+                    </a-row>
+                  </a-card>
+
                   <a-collapse>
                     <a-collapse-panel v-for="key in keys(aiForm.providers)" :key="key" :header="aiForm.providers[key].name">
                       <div v-if="aiProviderValue(key)">
                         <a-row :gutter="12">
                           <a-col :xs="24" :md="8"><a-form-item label="名称"><a-input v-model:value="aiProviderValue(key)!.name" /></a-form-item></a-col>
                           <a-col :xs="24" :md="8"><a-form-item label="Base URL"><a-input v-model:value="aiProviderValue(key)!.baseUrl" /></a-form-item></a-col>
+                          <a-col :xs="24" :md="8"><a-form-item label="API Path"><a-input v-model:value="aiProviderValue(key)!.apiPath" /></a-form-item></a-col>
                           <a-col :xs="24" :md="8"><a-form-item label="API Key"><a-input-password v-model:value="aiProviderValue(key)!.apiKey" /></a-form-item></a-col>
                           <a-col :xs="24" :md="8"><a-form-item label="模型"><a-input v-model:value="aiProviderValue(key)!.model" /></a-form-item></a-col>
                           <a-col :xs="24" :md="8"><a-form-item label="最大 Token"><a-input-number v-model:value="aiProviderValue(key)!.maxTokens" :min="1" class="full-width" /></a-form-item></a-col>

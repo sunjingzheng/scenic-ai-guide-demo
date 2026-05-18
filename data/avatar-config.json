@@ -8,15 +8,15 @@
   "greetingText": "您好！我是灵山胜境的AI导览员，很高兴为您服务。",
   "voiceEnabled": true,
   "voiceSpeed": 1.02,
-  "ttsSpeaker": "zero-shot",
+  "ttsSpeaker": "宵宫",
   "ttsLanguage": "zh",
-  "preferLocalTTS": false,
+  "preferLocalTTS": true,
   "live2d": {
     "enabled": true,
     "assetBase": "/live2d",
     "modelUrl": "Resources/Hiyori_pro/hiyori_pro_t11.model3.json",
     "coreUrl": "Core/live2dcubismcore.js",
-    "pixiUrl": "/live2d/vendor/pixi.min.js",
+    "pixiUrl": "/live2d/vendor/pixi-legacy.min.js",
     "runtimeUrl": "/live2d/vendor/cubism4.min.js",
     "modelPreset": "hiyori_pro",
     "models": [

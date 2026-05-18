@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { Home, Map, Compass, MessageCircle, Route, User, Landmark } from 'lucide-vue-next'
 import FloatingAvatar from '../../components/FloatingAvatar.vue'
+import { useGuideStore } from '../../stores/useGuideStore'
 
 const router = useRouter()
 const route = useRoute()
+const store = useGuideStore()
+const lastSpokenPath = ref('')
 
 const navItems = [
   { path: '/home', icon: Home, label: '首页' },
@@ -27,6 +31,54 @@ const mobileNavItems = [
 function isActive(path: string) {
   return route.path === path
 }
+
+const routeAnnouncements: Record<string, { text: string; audioUrl: string }> = {
+  '/home': {
+    text: '您好，欢迎来到灵山胜境智慧导览。我是 Hiyori，您的 AI 数字人导游。您可以问我景点历史、游览路线、表演时间，也可以上传图片让我帮您识别讲解。',
+    audioUrl: '/audio/route-intros/home.wav'
+  },
+  '/overview': {
+    text: '这里是园区总览。您可以按景区筛选灵山大佛、九龙灌浴和拈花湾，也可以搜索景点名称，我会结合知识库为您讲解每一处景点的文化亮点。',
+    audioUrl: '/audio/route-intros/overview.wav'
+  },
+  '/routes': {
+    text: '这里是路线推荐。我可以根据历史文化、祈福朝圣、自然风光或亲子休闲，为您推荐半日游、一日游和夜游路线。',
+    audioUrl: '/audio/route-intros/routes.wav'
+  }
+}
+
+function preloadRouteIntroAudio() {
+  for (const item of Object.values(routeAnnouncements)) {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'audio'
+    link.href = item.audioUrl
+    document.head.appendChild(link)
+    void fetch(item.audioUrl).catch(() => {})
+  }
+}
+
+async function speakRouteIntro(path: string) {
+  const intro = routeAnnouncements[path]
+  if (!intro || lastSpokenPath.value === path) return
+  lastSpokenPath.value = path
+  await store.loadBaseData()
+  window.setTimeout(() => {
+    void store.speakAudioUrl(intro.audioUrl, intro.text)
+  }, 120)
+}
+
+onMounted(() => {
+  preloadRouteIntroAudio()
+  void speakRouteIntro(route.path)
+})
+
+watch(
+  () => route.path,
+  (path) => {
+    void speakRouteIntro(path)
+  }
+)
 </script>
 
 <template>

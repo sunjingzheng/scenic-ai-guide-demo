@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
-import { playGuideTTS } from '../features/guideTts'
+import { playGuideAudioUrl, playGuideTTS } from '../features/guideTts'
 import type {
   AvatarConfig,
   BridgeConfig,
@@ -15,6 +15,7 @@ import type {
 } from '../types'
 
 export const useGuideStore = defineStore('guide', () => {
+  const sessionId = `scenic-demo-${Date.now()}-${Math.random().toString(16).slice(2)}`
   const spots = ref<Spot[]>([])
   const routes = ref<RoutePlan[]>([])
   const dashboard = ref<DashboardOverview | null>(null)
@@ -43,15 +44,15 @@ export const useGuideStore = defineStore('guide', () => {
     greetingText: '您好！我是灵山胜境的AI导览员，很高兴为您服务。',
     voiceEnabled: true,
     voiceSpeed: 1.02,
-    ttsSpeaker: 'zero-shot',
+    ttsSpeaker: '宵宫',
     ttsLanguage: 'zh',
-    preferLocalTTS: false,
+    preferLocalTTS: true,
     live2d: {
       enabled: true,
       assetBase: '/live2d',
       modelUrl: 'Resources/Hiyori_pro/hiyori_pro_t11.model3.json',
       coreUrl: 'Core/live2dcubismcore.js',
-      pixiUrl: '/live2d/vendor/pixi.min.js',
+      pixiUrl: '/live2d/vendor/pixi-legacy.min.js',
       runtimeUrl: '/live2d/vendor/cubism4.min.js'
     }
   })
@@ -60,6 +61,7 @@ export const useGuideStore = defineStore('guide', () => {
 
   async function loadBaseData() {
     await loadAvatarConfig()
+    await loadTTSConfig()
     if (!spots.value.length) spots.value = await api.getSpots()
     if (!routes.value.length) routes.value = await api.recommendRoutes(currentInterest.value)
   }
@@ -119,26 +121,40 @@ export const useGuideStore = defineStore('guide', () => {
     bridgeConfig.value = result.config
   }
 
-  async function ask(text: string) {
-    if (!text.trim()) return
-    messages.value.push({ role: 'user', text })
+  async function ask(text: string, imageUrls: string[] = []) {
+    if (!text.trim() && !imageUrls.length) return
+    const displayText = text.trim() || '请看这张图片'
+    messages.value.push({ role: 'user', text: imageUrls.length ? `${displayText}\n（已上传 ${imageUrls.length} 张图片）` : displayText, imageUrls })
     loading.value = true
 
     try {
-      const result = await api.chat({
-        text,
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        text: '',
+        emotion: 'thinking',
+        references: []
+      }
+      messages.value.push(assistantMessage)
+
+      const result = await api.chatStream({
+        text: displayText,
+        imageUrls,
         interest: currentInterest.value,
         location: '灵山胜境入口',
+        sessionId,
         history: messages.value.slice(-12)
+      }, {
+        onDelta(delta) {
+          assistantMessage.text += delta
+          messages.value = [...messages.value]
+        }
       })
       currentEmotion.value = result.emotion
       routes.value = result.recommendations
-      messages.value.push({
-        role: 'assistant',
-        text: result.answer,
-        emotion: result.emotion,
-        references: result.references
-      })
+      assistantMessage.text = result.answer
+      assistantMessage.emotion = result.emotion
+      assistantMessage.references = result.references
+      messages.value = [...messages.value]
       void speak(result.speechText)
     } finally {
       loading.value = false
@@ -157,6 +173,16 @@ export const useGuideStore = defineStore('guide', () => {
         preferLocalTTS: avatarConfig.value.preferLocalTTS,
         ttsConfig: ttsConfig.value
       })
+    } finally {
+      speaking.value = false
+    }
+  }
+
+  async function speakAudioUrl(url: string, fallbackText?: string) {
+    if (avatarConfig.value.voiceEnabled === false) return
+    speaking.value = true
+    try {
+      await playGuideAudioUrl(url, fallbackText)
     } finally {
       speaking.value = false
     }
@@ -199,6 +225,7 @@ export const useGuideStore = defineStore('guide', () => {
     loadAvatarConfig,
     ask,
     speak,
+    speakAudioUrl,
     updateInterest,
     saveAvatar
   }

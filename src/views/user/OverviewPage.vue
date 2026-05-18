@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useGuideStore } from '../../stores/useGuideStore'
-import { MapPin, Clock, Star, Navigation, Landmark, Search } from 'lucide-vue-next'
+import { MapPin, Clock, Star, Navigation, Search } from 'lucide-vue-next'
 
 const store = useGuideStore()
 const selectedArea = ref<string>('all')
@@ -45,6 +45,19 @@ const areaGradients: Record<string, string> = {
   '灵山大佛景区': 'linear-gradient(135deg, #d4edda, #c3e6cb)',
   '九龙灌浴景区': 'linear-gradient(135deg, #d1ecf1, #bee5eb)',
   '拈花湾景区': 'linear-gradient(135deg, #fff3cd, #ffeaa7)'
+}
+
+const scenicImages = [
+  { match: /大佛|祥符|降魔|阿育王|五智门/, src: '/images/scenic/lingshan-buddha.jpg' },
+  { match: /九龙|灌浴|莲花/, src: '/images/scenic/jiulong-bath.jpg' },
+  { match: /梵宫|坛城|曼陀罗/, src: '/images/scenic/fan-gong.jpg' },
+  { match: /拈花|香月|妙音|鹿鸣/, src: '/images/scenic/nianhua-bay.jpg' },
+  { match: /太湖|观景|自然|山水/, src: '/images/scenic/taihu-view.jpg' }
+]
+
+function spotImage(spot: { name: string; scenicArea: string; highlights?: string; detail?: string }) {
+  const text = `${spot.name}${spot.scenicArea}${spot.highlights || ''}${spot.detail || ''}`
+  return scenicImages.find((item) => item.match.test(text))?.src || '/images/scenic/taihu-view.jpg'
 }
 </script>
 
@@ -100,7 +113,7 @@ const areaGradients: Record<string, string> = {
         </div>
 
         <div class="spot-image" :style="{ background: areaGradients[spot.scenicArea] || 'linear-gradient(135deg, var(--primary-100), var(--primary-200))' }">
-          <Landmark :size="48" stroke-width="1.5" class="spot-icon-svg" />
+          <img :src="spotImage(spot)" :alt="spot.name" />
         </div>
 
         <div class="spot-content">
@@ -289,6 +302,13 @@ const areaGradients: Record<string, string> = {
   justify-content: center;
   transition: transform var(--transition-base);
   overflow: hidden;
+}
+
+.spot-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .spot-card:hover .spot-image {

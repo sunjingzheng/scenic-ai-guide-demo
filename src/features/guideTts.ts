@@ -1,7 +1,9 @@
 import { requestGptSoVitsTTS } from '../api/tts'
+import { getLive2DHandler, stopLive2DAudio } from './live2dBridge'
 import type { TTSConfig } from '../types'
 
 let playGeneration = 0
+const LIVE2D_READY_TIMEOUT = 1200
 
 const RE_EMOJI = /\p{Extended_Pictographic}[\u{FE0F}\u{FE0E}\u{200D}\u{20E3}\p{Extended_Pictographic}]*/gu
 const RE_KAOMOJI = /[（()）≧≦∇OwO><;:XDd^_=+\-~·°▽○●□■♡♥★☆♪♫◇◆]{3,}/g
@@ -56,12 +58,18 @@ export function splitSentences(text: string, maxSegments = 8) {
   return result.filter(Boolean)
 }
 
-function stopLive2DAudio() {
-  window.__live2dGetModel?.()?._wavFileHandler?.stop()
+async function waitForLive2DHandler() {
+  const startedAt = performance.now()
+  while (performance.now() - startedAt < LIVE2D_READY_TIMEOUT) {
+    const handler = getLive2DHandler()?._wavFileHandler
+    if (handler) return handler
+    await new Promise((resolve) => window.setTimeout(resolve, 40))
+  }
+  return getLive2DHandler()?._wavFileHandler
 }
 
 async function playWithLive2D(buffer: ArrayBuffer) {
-  const handler = window.__live2dGetModel?.()?._wavFileHandler
+  const handler = await waitForLive2DHandler()
   if (!handler) return false
   await handler.startFromBuffer(buffer)
   await handler.waitUntilEnd()
@@ -142,4 +150,27 @@ export async function playGuideTTS(
 
   if (gen !== playGeneration) return
   await speakWithBrowser(cleaned, options.rate, options.pitch)
+}
+
+export async function playGuideAudioUrl(url: string, fallbackText?: string) {
+  const gen = ++playGeneration
+  stopLive2DAudio()
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`音频加载失败：${response.status}`)
+    const contentType = response.headers.get('content-type') || 'audio/wav'
+    const buffer = await response.arrayBuffer()
+    if (gen !== playGeneration) return
+
+    const synced = await playWithLive2D(buffer)
+    if (!synced) {
+      await playWithAudioElement(buffer, contentType)
+    }
+  } catch (error) {
+    console.warn('[TTS] 本地讲解音频不可用，回退浏览器语音：', error)
+    if (fallbackText && gen === playGeneration) {
+      await speakWithBrowser(cleanForTTS(fallbackText))
+    }
+  }
 }

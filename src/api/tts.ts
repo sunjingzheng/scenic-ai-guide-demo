@@ -31,8 +31,19 @@ function buildGptSoVitsPayload(text: string, config: any) {
 export async function requestGptSoVitsTTS(text: string, config: any) {
   const endpoint = `${config.baseUrl.replace(/\/$/, '')}${config.apiPath || '/tts'}`
   const isGptSoVits = config.provider === 'gpt-sovits-v2-pro-plus' || config.provider === 'gpt-sovits'
+  const isEmotionTTS = config.provider === 'emotiontts' || config.provider === 'emotion-tts'
   const payload = isGptSoVits
     ? buildGptSoVitsPayload(text, config)
+    : isEmotionTTS
+      ? {
+          model: config.emotionTTS?.model || 'emotionTTS',
+          input: text,
+          text,
+          voice: config.emotionTTS?.voice || config.speaker || '宵宫',
+          speaker: config.emotionTTS?.voice || config.speaker || '宵宫',
+          response_format: config.emotionTTS?.responseFormat || 'wav',
+          speed: config.emotionTTS?.speed ?? 1
+        }
     : {
         text,
         speaker: config.speaker,

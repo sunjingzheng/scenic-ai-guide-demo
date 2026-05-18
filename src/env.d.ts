@@ -20,6 +20,7 @@ type Live2DModelInstance = {
   }
   getLocalBounds?(): { width: number; height: number }
   motion?(group: string): void
+  destroy?(options?: Record<string, boolean>): void
 }
 
 interface SpeechRecognitionAlternative {
@@ -29,6 +30,7 @@ interface SpeechRecognitionAlternative {
 
 interface SpeechRecognitionResult {
   readonly length: number
+  readonly isFinal: boolean
   item(index: number): SpeechRecognitionAlternative
   [index: number]: SpeechRecognitionAlternative
 }
@@ -45,11 +47,14 @@ interface SpeechRecognitionEvent extends Event {
 
 interface SpeechRecognition extends EventTarget {
   lang: string
+  continuous: boolean
   interimResults: boolean
   onresult: ((event: SpeechRecognitionEvent) => void) | null
   onerror: (() => void) | null
   onend: (() => void) | null
   start(): void
+  stop(): void
+  abort(): void
 }
 
 interface Window {
@@ -65,14 +70,4 @@ interface Window {
   webkitAudioContext?: typeof AudioContext
   SpeechRecognition?: SpeechRecognitionConstructor
   webkitSpeechRecognition?: SpeechRecognitionConstructor
-  __live2dAvatarActiveId?: symbol
-  __live2dGetModel?: () => {
-    _wavFileHandler?: {
-      startFromBuffer(buffer: ArrayBuffer): Promise<void>
-      waitUntilEnd(): Promise<void>
-      stop(): void
-    }
-    triggerMotion?: () => void
-    setEmotion?: (emotion: string) => void
-  } | null
 }

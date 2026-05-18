@@ -1,7 +1,28 @@
 {
-  "activeProvider": "local_rag",
+  "activeProvider": "doubao_ark_rag",
   "contextWindowRounds": 6,
+  "ragBackend": {
+    "enabled": true,
+    "baseUrl": "http://localhost:8000",
+    "chatPath": "/api/chat/",
+    "chatStreamPath": "/api/chat-stream/",
+    "modelType": "doubao",
+    "authToken": ""
+  },
   "providers": {
+    "doubao_ark_rag": {
+      "type": "openai-compatible",
+      "name": "豆包 RAG 知识库",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "apiPath": "/responses",
+      "apiKey": "",
+      "model": "doubao-seed-2-0-pro-260215",
+      "maxTokens": 1024,
+      "temperature": 0.65,
+      "thinkingBudgetTokens": 0,
+      "enabledToolsets": ["rag"],
+      "systemPrompt": "你是灵山胜境 AI 数字人导游。回答要温和、准确、适合景区游客；必须优先依据后端 RAG 知识库召回的资料回答。"
+    },
     "local_rag": {
       "type": "openai-compatible",
       "name": "本地 JSON 知识库",

@@ -1,5 +1,14 @@
-import { apiGet } from './http'
+import { apiGet, apiPost } from './http'
+import {
+  buildRagChatRequest,
+  buildRagStreamRequest,
+  mapRagChatResponse,
+  mapRagStreamDone,
+  shouldUseRagBackend,
+  type RagStreamEvent
+} from './chatBackend'
 import { readStored, writeStored } from './storage'
+import type { ChatResponse } from '../types'
 
 const DATA_FILES = {
   spots: 'spots.json',
@@ -54,16 +63,28 @@ function getActiveTTSProvider(config: any) {
 function normalizeTTSConfig(config: any) {
   const provider = getActiveTTSProvider(config)
   if (!provider) return config
+  const isEmotionTTS = (provider.engine || config.provider) === 'emotiontts'
+  const normalizedProvider = isEmotionTTS && (provider.speaker === '流莹' || provider.emotionTTS?.voice === '流莹')
+    ? {
+        ...provider,
+        speaker: '宵宫',
+        emotionTTS: {
+          ...(provider.emotionTTS || config.emotionTTS),
+          voice: '宵宫'
+        }
+      }
+    : provider
 
   return {
     ...config,
-    provider: provider.engine || config.provider,
-    baseUrl: provider.baseUrl,
-    apiPath: provider.apiPath || config.apiPath,
-    apiKey: provider.apiKey || config.apiKey,
-    speaker: provider.speaker,
-    language: provider.language,
-    gptSoVits: provider.gptSoVits || config.gptSoVits
+    provider: normalizedProvider.engine || config.provider,
+    baseUrl: normalizedProvider.baseUrl,
+    apiPath: normalizedProvider.apiPath || config.apiPath,
+    apiKey: normalizedProvider.apiKey || config.apiKey,
+    speaker: normalizedProvider.speaker,
+    language: normalizedProvider.language,
+    gptSoVits: normalizedProvider.gptSoVits || config.gptSoVits,
+    emotionTTS: normalizedProvider.emotionTTS || config.emotionTTS
   }
 }
 
@@ -80,8 +101,8 @@ function normalizeAvatarConfig(config: any) {
       modelUrl: live2d.modelUrl || 'Resources/Hiyori_pro/hiyori_pro_t11.model3.json',
       coreUrl: live2d.coreUrl || 'Core/live2dcubismcore.js',
       pixiUrl:
-        !live2d.pixiUrl || String(live2d.pixiUrl).includes('cdn.jsdelivr.net')
-          ? '/live2d/vendor/pixi.min.js'
+        !live2d.pixiUrl || String(live2d.pixiUrl).includes('cdn.jsdelivr.net') || String(live2d.pixiUrl).endsWith('/pixi.min.js')
+          ? '/live2d/vendor/pixi-legacy.min.js'
           : live2d.pixiUrl,
       runtimeUrl:
         !live2d.runtimeUrl || String(live2d.runtimeUrl).includes('cdn.jsdelivr.net')
@@ -142,6 +163,21 @@ export const api = {
   },
 
   async chat(payload: any) {
+    const aiConfig = await api.getAIConfig()
+    if (shouldUseRagBackend(aiConfig)) {
+      try {
+        const request = buildRagChatRequest(aiConfig, {
+          text: payload.text,
+          sessionId: payload.sessionId,
+          imageUrls: payload.imageUrls
+        })
+        const response = await apiPost(request.url, request.data, request.config)
+        return mapRagChatResponse(response.data)
+      } catch (error) {
+        console.warn('RAG backend unavailable, fallback to local JSON knowledge base:', error)
+      }
+    }
+
     const [spots, recommendations] = await Promise.all([
       api.getSpots(),
       getRoutesByInterest(payload.interest)
@@ -157,6 +193,65 @@ export const api = {
       recommendations,
       modelProvider: 'Local JSON knowledge base'
     }
+  },
+
+  async chatStream(
+    payload: any,
+    handlers: {
+      onDelta?: (delta: string) => void
+      onMeta?: (event: RagStreamEvent) => void
+    } = {}
+  ): Promise<ChatResponse> {
+    const aiConfig = await api.getAIConfig()
+    if (shouldUseRagBackend(aiConfig)) {
+      try {
+        const request = buildRagStreamRequest(aiConfig, {
+          text: payload.text,
+          sessionId: payload.sessionId,
+          imageUrls: payload.imageUrls
+        })
+        const response = await fetch(request.url, {
+          method: 'POST',
+          headers: request.headers,
+          body: JSON.stringify(request.data)
+        })
+        if (!response.ok || !response.body) throw new Error(`RAG stream failed: ${response.status}`)
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let doneEvent: Extract<RagStreamEvent, { type: 'done' }> | null = null
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const parts = buffer.split('\n\n')
+          buffer = parts.pop() || ''
+
+          for (const part of parts) {
+            const dataLine = part
+              .split('\n')
+              .find((line) => line.startsWith('data:'))
+              ?.replace(/^data:\s*/, '')
+            if (!dataLine) continue
+
+            const event = JSON.parse(dataLine) as RagStreamEvent
+            if (event.type === 'delta') handlers.onDelta?.(event.delta)
+            if (event.type === 'meta') handlers.onMeta?.(event)
+            if (event.type === 'done') doneEvent = event
+          }
+        }
+
+        if (doneEvent) return mapRagStreamDone(doneEvent)
+      } catch (error) {
+        console.warn('RAG stream unavailable, fallback to regular chat:', error)
+      }
+    }
+
+    const result = await api.chat(payload)
+    handlers.onDelta?.(result.answer)
+    return result
   },
 
   recommendRoutes(interest: string) {
@@ -199,7 +294,8 @@ export const api = {
     }
 
     try {
-      await apiGet(`${config.baseUrl.replace(/\/$/, '')}/docs`, { responseType: 'text', timeout: 2500 })
+      const statusPath = config.provider === 'emotiontts' ? config.apiPath || '/api/tts/emotion/' : '/docs'
+      await apiGet(`${config.baseUrl.replace(/\/$/, '')}${statusPath}`, { responseType: 'text', timeout: 2500 })
       return {
         enabled: true,
         healthy: true,

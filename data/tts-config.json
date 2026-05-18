@@ -1,11 +1,11 @@
 {
-  "_comment": "迁移自 ai-live2d-go 的多 TTS Provider 配置。enabled=false 时使用浏览器语音。",
-  "enabled": false,
-  "activeProvider": "gpt_sovits_zero_shot",
-  "provider": "gpt-sovits-v2-pro-plus",
-  "baseUrl": "http://localhost:9880",
-  "apiPath": "/tts",
-  "speaker": "zero-shot",
+  "_comment": "已接入 Downloads/emotionTTS_v4.0；enabled=false 时使用浏览器语音。",
+  "enabled": true,
+  "activeProvider": "emotiontts_local",
+  "provider": "emotiontts",
+  "baseUrl": "http://localhost:8000",
+  "apiPath": "/api/tts/emotion/",
+  "speaker": "宵宫",
   "language": "zh",
   "providers": {
     "gpt_sovits_zero_shot": {
@@ -63,12 +63,78 @@
       "isLocal": true,
       "speakerMode": "preset",
       "voicePresets": [
-        { "id": "Junhao", "name": "俊豪", "description": "中文男声 A", "refAudioFile": "zh_1.wav" },
-        { "id": "Xiaoyu", "name": "小雨", "description": "中文女声 A", "refAudioFile": "zh_3.wav" },
-        { "id": "Yuewen", "name": "月雯", "description": "中文女声 B", "refAudioFile": "zh_4.wav" },
-        { "id": "Lingyu", "name": "灵雨", "description": "中文女声 C", "refAudioFile": "zh_6.wav" },
-        { "id": "Hiyori", "name": "ひより", "description": "Hiyori 自定义", "refAudioFile": "hiyori-ch.wav" }
+        {
+          "id": "Junhao",
+          "name": "俊豪",
+          "description": "中文男声 A",
+          "refAudioFile": "zh_1.wav"
+        },
+        {
+          "id": "Xiaoyu",
+          "name": "小雨",
+          "description": "中文女声 A",
+          "refAudioFile": "zh_3.wav"
+        },
+        {
+          "id": "Yuewen",
+          "name": "月雯",
+          "description": "中文女声 B",
+          "refAudioFile": "zh_4.wav"
+        },
+        {
+          "id": "Lingyu",
+          "name": "灵雨",
+          "description": "中文女声 C",
+          "refAudioFile": "zh_6.wav"
+        },
+        {
+          "id": "Hiyori",
+          "name": "ひより",
+          "description": "Hiyori 自定义",
+          "refAudioFile": "hiyori-ch.wav"
+        }
       ]
+    },
+    "emotiontts_local": {
+      "type": "http-tts",
+      "name": "EmotionTTS 本地情绪语音",
+      "engine": "emotiontts",
+      "baseUrl": "http://localhost:8000",
+      "apiPath": "/api/tts/emotion/",
+      "apiKey": "",
+      "speaker": "宵宫",
+      "language": "zh",
+      "isLocal": true,
+      "localEngine": "emotionTTS_v4.0",
+      "speakerMode": "preset",
+      "voicePresets": [
+        {
+          "id": "流莹",
+          "name": "流莹",
+          "description": "温柔女声，适合景区导览"
+        },
+        {
+          "id": "宵宫",
+          "name": "宵宫",
+          "description": "活泼女声"
+        },
+        {
+          "id": "菲比",
+          "name": "菲比",
+          "description": "平和女声"
+        },
+        {
+          "id": "可莉",
+          "name": "可莉",
+          "description": "童声角色"
+        }
+      ],
+      "emotionTTS": {
+        "model": "emotionTTS",
+          "voice": "宵宫",
+        "responseFormat": "wav",
+        "speed": 1
+      }
     }
   },
   "gptSoVits": {
@@ -89,5 +155,11 @@
     "parallelInfer": true,
     "repetitionPenalty": 1.35,
     "auxRefAudioPaths": []
+  },
+  "emotionTTS": {
+    "model": "emotionTTS",
+    "voice": "宵宫",
+    "responseFormat": "wav",
+    "speed": 1
   }
 }

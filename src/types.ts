@@ -26,6 +26,7 @@ export type RoutePlan = {
 export type ChatMessage = {
   role: 'user' | 'assistant'
   text: string
+  imageUrls?: string[]
   emotion?: string
   references?: Spot[]
 }
@@ -43,6 +44,7 @@ export type ProviderConfig = {
   type: 'openai-compatible'
   name: string
   baseUrl: string
+  apiPath?: string
   apiKey: string
   model: string
   maxTokens?: number
@@ -56,6 +58,14 @@ export type ProviderConfig = {
 export type RuntimeAIConfig = {
   activeProvider: string
   contextWindowRounds: number
+  ragBackend?: {
+    enabled: boolean
+    baseUrl: string
+    chatPath: string
+    chatStreamPath?: string
+    modelType: string
+    authToken?: string
+  }
   providers: Record<string, ProviderConfig>
 }
 
@@ -88,6 +98,12 @@ export type TTSConfig = {
     repetitionPenalty?: number
     auxRefAudioPaths?: string[]
   }
+  emotionTTS?: {
+    model?: string
+    voice?: string
+    responseFormat?: string
+    speed?: number
+  }
 }
 
 export type VoicePresetItem = {
@@ -111,6 +127,7 @@ export type TTSProviderConfig = {
   speakerMode?: 'text' | 'preset'
   voicePresets?: VoicePresetItem[]
   gptSoVits?: TTSConfig['gptSoVits']
+  emotionTTS?: TTSConfig['emotionTTS']
 }
 
 export type TTSStatus = {

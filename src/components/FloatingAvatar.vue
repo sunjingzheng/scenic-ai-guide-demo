@@ -1,577 +1,560 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import { Mic, Send, X, Minimize2, Maximize2, Bot } from 'lucide-vue-next'
-import { useGuideStore } from '../stores/useGuideStore'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Bot, ChevronDown, ImagePlus, Maximize2, Mic, Minimize2, Square, X } from 'lucide-vue-next'
+import { BubbleList, Sender, XProvider } from 'ant-design-x-vue'
+import { Badge } from 'ant-design-vue'
 import AvatarGuide from './AvatarGuide.vue'
+import { useGuideStore } from '../stores/useGuideStore'
+import { DEFAULT_CHAT_EXPANDED } from '../features/avatarPanel'
 
 const store = useGuideStore()
 const input = ref('')
-const isExpanded = ref(false)
+const isExpanded = ref(DEFAULT_CHAT_EXPANDED)
 const isMinimized = ref(false)
 const recognitionState = ref<'idle' | 'listening' | 'unsupported'>('idle')
-const messagesContainer = ref<HTMLElement | null>(null)
+const chatBody = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const selectedImages = ref<string[]>([])
+const continuousVoice = ref(false)
+const interimText = ref('')
+let recognition: SpeechRecognition | null = null
 
-const quickQuestions = [
-  '灵山大佛有什么特色？',
-  '九龙灌浴什么时间表演？',
-  '推荐一条半日游路线',
-  '拈花湾晚上有什么活动？'
-]
+const bubbleRoles = {
+  assistant: {
+    placement: 'start',
+    variant: 'shadow',
+    avatar: {
+      style: { background: '#eaf7ef', color: '#25754f' },
+      icon: '灵'
+    }
+  },
+  user: {
+    placement: 'end',
+    variant: 'filled',
+    avatar: {
+      style: { background: '#328f62', color: '#fff' },
+      icon: '我'
+    }
+  }
+} as const
+
+const bubbleItems = computed(() =>
+  store.messages.map((message, index) => ({
+    key: index,
+    role: message.role,
+    content: message.text || (message.role === 'assistant' && store.loading ? '正在检索知识库...' : ''),
+    loading: message.role === 'assistant' && !message.text && store.loading,
+    footer:
+      message.role === 'assistant' && message.references?.length
+        ? `引用：${message.references.map((item) => item.name).join('、')}`
+        : undefined,
+    typing:
+      message.role === 'assistant' && index === store.messages.length - 1 && store.loading
+        ? { step: 2, interval: 24 }
+        : false
+  }))
+)
 
 onMounted(() => {
   store.loadBaseData()
 })
 
+onBeforeUnmount(() => {
+  stopVoice()
+})
+
+watch(
+  () => [store.messages.length, store.messages[store.messages.length - 1]?.text, store.loading],
+  () => nextTick(scrollToBottom),
+  { deep: true }
+)
+
 function submit(text = input.value) {
   const value = text.trim()
-  if (!value) return
+  if ((!value && !selectedImages.value.length) || store.loading) return
   input.value = ''
-  store.ask(value)
-  if (!isExpanded.value) {
-    isExpanded.value = true
-  }
-  nextTick(() => scrollToBottom())
+  interimText.value = ''
+  const images = [...selectedImages.value]
+  selectedImages.value = []
+  isExpanded.value = true
+  isMinimized.value = false
+  void store.ask(value, images)
+  nextTick(scrollToBottom)
 }
 
 function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  if (chatBody.value) {
+    chatBody.value.scrollTop = chatBody.value.scrollHeight
   }
 }
 
-function startVoice() {
+function createRecognition(isContinuous: boolean) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
   if (!SpeechRecognition) {
     recognitionState.value = 'unsupported'
-    return
+    return null
   }
 
-  const recognition = new SpeechRecognition()
-  recognition.lang = 'zh-CN'
-  recognition.interimResults = false
+  const instance = new SpeechRecognition()
+  instance.lang = 'zh-CN'
+  instance.continuous = isContinuous
+  instance.interimResults = isContinuous
   recognitionState.value = 'listening'
 
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
-    const text = event.results[0]?.[0]?.transcript ?? ''
+  instance.onresult = (event: SpeechRecognitionEvent) => {
+    let finalText = ''
+    let currentInterim = ''
+    for (let index = 0; index < event.results.length; index += 1) {
+      const result = event.results[index]
+      const text = result?.[0]?.transcript?.trim() || ''
+      if (!text) continue
+      if (result.isFinal) finalText += text
+      else currentInterim += text
+    }
+
+    interimText.value = currentInterim
+    if (currentInterim) input.value = currentInterim
+    if (finalText) {
+      input.value = finalText
+      submit(finalText)
+    }
+  }
+
+  instance.onerror = () => {
+    if (!continuousVoice.value) recognitionState.value = 'idle'
+  }
+
+  instance.onend = () => {
     recognitionState.value = 'idle'
-    input.value = text
-    submit(text)
+    if (continuousVoice.value) {
+      window.setTimeout(() => {
+        if (continuousVoice.value && !store.loading) startVoice(true)
+      }, 280)
+    }
   }
 
-  recognition.onerror = () => (recognitionState.value = 'idle')
-  recognition.onend = () => {
-    if (recognitionState.value === 'listening') recognitionState.value = 'idle'
-  }
+  return instance
+}
 
-  recognition.start()
+function startVoice(isContinuous = false) {
+  stopVoice()
+  continuousVoice.value = isContinuous
+  recognition = createRecognition(isContinuous)
+  recognition?.start()
+}
+
+function stopVoice() {
+  continuousVoice.value = false
+  interimText.value = ''
+  recognitionState.value = 'idle'
+  recognition?.abort()
+  recognition = null
+}
+
+function toggleContinuousVoice() {
+  if (continuousVoice.value) {
+    stopVoice()
+    return
+  }
+  startVoice(true)
+}
+
+function triggerImageInput() {
+  fileInput.value?.click()
+}
+
+function handleImageChange(event: Event) {
+  const inputEl = event.target as HTMLInputElement
+  const files = Array.from(inputEl.files || []).slice(0, 3)
+  if (!files.length) return
+  Promise.all(files.map(readImageFile)).then((items) => {
+    selectedImages.value = [...selectedImages.value, ...items].slice(0, 3)
+  })
+  inputEl.value = ''
+}
+
+function readImageFile(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('图片读取失败'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function removeImage(index: number) {
+  selectedImages.value = selectedImages.value.filter((_, itemIndex) => itemIndex !== index)
 }
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
   if (isExpanded.value) {
-    nextTick(() => scrollToBottom())
+    isMinimized.value = false
+    nextTick(scrollToBottom)
   }
 }
 
 function toggleMinimize() {
   isMinimized.value = !isMinimized.value
+  if (isMinimized.value) isExpanded.value = false
 }
 </script>
 
 <template>
-  <!-- 浮动数字人助手 -->
-  <div class="floating-assistant" :class="{ expanded: isExpanded, minimized: isMinimized }">
-    <!-- 最小化状态 -->
-    <div v-if="isMinimized" class="minimized-avatar" @click="toggleMinimize">
-      <AvatarGuide
-        :speaking="store.speaking"
-        :emotion="store.currentEmotion"
-        :outfit="store.avatarConfig.outfit"
-        :live2d="store.avatarConfig.live2d"
-      />
-      <div v-if="store.speaking" class="pulse-ring"></div>
-    </div>
+  <XProvider>
+    <div class="floating-assistant" :class="{ expanded: isExpanded, minimized: isMinimized }">
+      <button v-if="isMinimized" class="agent-orb" type="button" @click="toggleMinimize">
+        <Bot :size="24" />
+      </button>
 
-    <!-- 正常/展开状态 -->
-    <div v-else class="assistant-container glass-card">
-      <!-- 头部 -->
-      <div class="assistant-header">
-        <div class="header-info">
-          <Bot :size="20" class="header-bot-icon" />
-          <div>
-            <h3>AI数字导员</h3>
-            <span :class="{ active: store.speaking }">
-              {{ store.speaking ? '正在讲解' : '在线服务' }}
-            </span>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button class="icon-btn" @click="toggleExpand" :title="isExpanded ? '收起' : '展开'">
-            <Minimize2 v-if="isExpanded" :size="16" />
-            <Maximize2 v-else :size="16" />
-          </button>
-          <button class="icon-btn" @click="toggleMinimize" title="最小化">
-            <X :size="16" />
-          </button>
-        </div>
-      </div>
+      <template v-else>
+        <button class="avatar-float" type="button" :title="isExpanded ? '收起对话' : '展开对话'" @click="toggleExpand">
+          <AvatarGuide
+            :speaking="store.speaking || store.loading"
+            :emotion="store.currentEmotion"
+            :outfit="store.avatarConfig.outfit"
+            :live2d="store.avatarConfig.live2d"
+          />
+        </button>
 
-      <!-- 数字人形象 -->
-      <div class="avatar-section">
-        <AvatarGuide
-          :speaking="store.speaking"
-          :emotion="store.currentEmotion"
-          :outfit="store.avatarConfig.outfit"
-          :live2d="store.avatarConfig.live2d"
-        />
-        <div class="avatar-status">
-          <span :class="{ pulse: store.speaking }"></span>
-          <p>{{ store.speaking ? '正在语音讲解' : '随时为您服务' }}</p>
-        </div>
-      </div>
-
-      <!-- 展开的对话区域 -->
-      <div v-if="isExpanded" class="chat-section">
-        <div ref="messagesContainer" class="messages-container">
-          <div
-            v-for="(message, index) in store.messages"
-            :key="index"
-            class="message"
-            :class="message.role"
-          >
-            <div v-if="message.role === 'assistant'" class="message-avatar">
-              <Bot :size="14" />
-            </div>
-            <div class="message-content">
-              <p>{{ message.text }}</p>
-              <small v-if="message.references?.length">
-                引用：{{ message.references.map(s => s.name).join('、') }}
-              </small>
-            </div>
-          </div>
-          <div v-if="store.loading" class="message assistant loading">
-            <div class="message-avatar">
-              <Bot :size="14" />
-            </div>
-            <div class="message-content">
-              <div class="typing-indicator">
-                <span></span><span></span><span></span>
+        <a-card v-if="isExpanded" class="agent-panel" :bordered="false">
+          <template #title>
+            <a-flex align="center" gap="small">
+              <Badge status="success" />
+              <div class="agent-title">
+                <strong>Hiyori</strong>
+                <span>{{ store.loading ? '正在思考' : '在线' }}</span>
               </div>
-            </div>
+            </a-flex>
+          </template>
+
+          <template #extra>
+            <a-flex gap="small">
+              <a-button shape="circle" type="text" :title="isExpanded ? '收起对话' : '展开对话'" @click="toggleExpand">
+                <Minimize2 v-if="isExpanded" :size="16" />
+                <Maximize2 v-else :size="16" />
+              </a-button>
+              <a-button shape="circle" type="text" title="最小化" @click="toggleMinimize">
+                <ChevronDown :size="16" />
+              </a-button>
+              <a-button shape="circle" type="text" title="关闭" @click="toggleMinimize">
+                <X :size="16" />
+              </a-button>
+            </a-flex>
+          </template>
+
+          <div v-show="isExpanded" ref="chatBody" class="agent-chat-body">
+            <BubbleList class="agent-bubbles" :items="bubbleItems" :roles="bubbleRoles" :auto-scroll="true" />
           </div>
-        </div>
 
-        <!-- 快捷问题 -->
-        <div class="quick-questions">
-          <button
-            v-for="q in quickQuestions"
-            :key="q"
-            class="quick-btn"
-            @click="submit(q)"
+          <div v-if="selectedImages.length" class="image-tray">
+            <button v-for="(image, index) in selectedImages" :key="image" type="button" @click="removeImage(index)">
+              <img :src="image" alt="待发送图片" />
+              <span>移除</span>
+            </button>
+          </div>
+
+          <p v-if="continuousVoice || interimText" class="voice-status">
+            {{ interimText || '长时间语音对话中，说完一句会自动提问' }}
+          </p>
+
+          <Sender
+            v-model:value="input"
+            class="agent-sender"
+            :loading="store.loading"
+            :placeholder="continuousVoice ? '正在持续聆听...' : '说点什么，或上传图片提问...'"
+            submit-type="enter"
+            @submit="submit"
           >
-            {{ q }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 输入区域 -->
-      <div class="input-section">
-        <button
-          class="icon-btn voice-btn"
-          :class="{ listening: recognitionState === 'listening' }"
-          @click="startVoice"
-          :title="recognitionState === 'listening' ? '聆听中' : '语音输入'"
-        >
-          <Mic :size="20" />
-        </button>
-        <input
-          v-model="input"
-          class="input"
-          placeholder="问我任何关于景区的问题..."
-          @keyup.enter="submit()"
-        />
-        <button class="btn btn-primary send-btn" :disabled="!input.trim()" @click="submit()">
-          <Send :size="18" />
-        </button>
-      </div>
+            <template #prefix>
+              <input ref="fileInput" class="hidden-file" type="file" accept="image/*" multiple @change="handleImageChange" />
+              <a-button shape="circle" type="text" title="图片输入" @click="triggerImageInput">
+                <ImagePlus :size="18" />
+              </a-button>
+              <a-button
+                shape="circle"
+                type="text"
+                :class="{ listening: recognitionState === 'listening' }"
+                title="单句语音输入"
+                @click="() => startVoice(false)"
+              >
+                <Mic :size="18" />
+              </a-button>
+              <a-button
+                shape="circle"
+                type="text"
+                :class="{ listening: continuousVoice }"
+                :title="continuousVoice ? '停止长时间语音对话' : '长时间语音对话'"
+                @click="toggleContinuousVoice"
+              >
+                <Square v-if="continuousVoice" :size="15" />
+                <Bot v-else :size="17" />
+              </a-button>
+            </template>
+          </Sender>
+        </a-card>
+      </template>
     </div>
-  </div>
+  </XProvider>
 </template>
 
 <style scoped>
-/* 浮动助手 */
 .floating-assistant {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  right: 28px;
+  bottom: 18px;
+  width: min(440px, calc(100vw - 32px));
+  height: min(720px, calc(100vh - 36px));
   z-index: 1000;
-  transition: all var(--transition-base);
+  pointer-events: none;
+  --agent-panel-width: min(360px, calc(100vw - 48px));
+  --agent-panel-height: 248px;
+  --agent-avatar-width: clamp(420px, 62vh, 560px);
+  --agent-avatar-frame-height: min(520px, calc(100vh - 120px));
+  --agent-avatar-stage-height: min(820px, calc(100vh + 120px));
 }
 
-/* 最小化状态 */
-.minimized-avatar {
+.floating-assistant.expanded {
+  --agent-panel-height: 210px;
+  --agent-avatar-width: clamp(400px, 56vh, 520px);
+  --agent-avatar-frame-height: min(430px, calc(100vh - 288px));
+  --agent-avatar-stage-height: min(780px, calc(100vh + 80px));
+}
+
+.agent-orb,
+.avatar-float,
+.agent-panel {
+  pointer-events: auto;
+}
+
+.agent-orb {
+  position: absolute;
+  right: 0;
+  bottom: 0;
   width: 72px;
   height: 72px;
+  border: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  padding: 3px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary-500), var(--accent-teal));
+  box-shadow: 0 18px 45px rgba(50, 143, 98, 0.28);
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  position: relative;
-  box-shadow: var(--shadow-green);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.minimized-avatar:hover {
-  transform: scale(1.08);
-  box-shadow: var(--shadow-xl);
-}
-
-.minimized-avatar:active {
-  transform: scale(0.95);
-}
-
-.pulse-ring {
+.avatar-float {
   position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border: 2px solid var(--primary-400);
-  border-radius: 50%;
-  animation: pulse-ring 1.5s ease-out infinite;
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
-}
-
-/* 正常状态 */
-.assistant-container {
-  width: 380px;
-  max-height: 600px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: assistant-entrance 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes assistant-entrance {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.floating-assistant.expanded .assistant-container {
-  width: 450px;
-  max-height: 700px;
-}
-
-/* 头部 */
-.assistant-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.header-bot-icon {
-  color: var(--primary-600);
-  background: var(--primary-100);
-  padding: 6px;
-  border-radius: var(--radius-md);
-  width: 32px;
-  height: 32px;
-}
-
-.header-info h3 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.15rem;
-}
-
-.header-info span {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.header-info span.active {
-  color: var(--primary-600);
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
+  right: 0;
+  bottom: 0;
+  width: var(--agent-avatar-width);
+  height: var(--agent-avatar-frame-height);
+  padding: 0;
+  border: 0;
   background: transparent;
-  color: var(--text-secondary);
-  border-radius: var(--radius-md);
+  z-index: 3;
+  display: grid;
+  place-items: start center;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-}
-
-.icon-btn:hover {
-  background: var(--primary-50);
-  color: var(--primary-600);
-}
-
-/* 数字人区域 */
-.avatar-section {
-  padding: var(--spacing-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.avatar-status {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.avatar-status span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary-500);
-}
-
-.avatar-status span.pulse {
-  animation: status-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.avatar-status p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-/* 对话区域 */
-.chat-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid var(--border-light);
+  filter: drop-shadow(0 28px 34px rgba(22, 58, 39, 0.25));
 }
 
-.messages-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
+.avatar-float:focus,
+.avatar-float:focus-visible {
+  outline: none;
+}
+
+.floating-assistant.expanded .avatar-float {
+  bottom: calc(var(--agent-panel-height) - 8px);
+}
+
+.avatar-float :deep(.avatar-stage) {
+  width: var(--agent-avatar-width);
+  height: var(--agent-avatar-stage-height);
+  min-height: var(--agent-avatar-stage-height);
+  overflow: visible;
+}
+
+.avatar-float :deep(.live2d-avatar) {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-float :deep(.live2d-loading) {
+  display: none;
+}
+
+.avatar-float :deep(.voice-rings) {
+  display: none;
+}
+
+.agent-panel {
+  position: absolute;
+  right: 24px;
+  bottom: 0;
+  width: var(--agent-panel-width);
+  height: var(--agent-panel-height);
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 64px rgba(32, 71, 52, 0.2);
+  border: 1px solid rgba(50, 143, 98, 0.2);
+  backdrop-filter: blur(18px);
+}
+
+.agent-panel :deep(.ant-card-head) {
+  min-height: 52px;
+  border: 0;
+  color: #fff;
+  background: linear-gradient(105deg, var(--primary-600) 0%, var(--accent-mint) 100%);
+}
+
+.agent-panel :deep(.ant-card-head-title),
+.agent-panel :deep(.ant-card-extra) {
+  color: #fff;
+}
+
+.agent-panel :deep(.ant-btn-text) {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.agent-title {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  line-height: 1.15;
 }
 
-.message {
-  display: flex;
-  gap: var(--spacing-sm);
-  max-width: 90%;
-  animation: message-entrance 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.agent-title strong {
+  font-size: 18px;
+  letter-spacing: 0;
 }
 
-@keyframes message-entrance {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.agent-title span {
+  font-size: 13px;
+  opacity: 0.9;
 }
 
-.message.user {
-  align-self: flex-end;
-  flex-direction: row-reverse;
+.agent-panel :deep(.ant-card-body) {
+  padding: 10px 14px 14px;
 }
 
-.message-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.agent-chat-body {
+  height: calc(var(--agent-panel-height) - 146px);
+  min-height: 68px;
+  overflow-y: auto;
+  padding: 4px 2px 10px;
+  scroll-behavior: smooth;
 }
 
-.message.assistant .message-avatar {
-  background: var(--primary-100);
-  color: var(--primary-600);
+.agent-bubbles :deep(.ant-bubble-content) {
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
-.message.user .message-avatar {
-  background: var(--primary-600);
-  color: white;
-}
-
-.message-content {
-  padding: 10px 14px;
-  border-radius: var(--radius-lg);
-  font-size: 0.85rem;
-  line-height: 1.6;
-}
-
-.message.user .message-content {
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-
-.message.assistant .message-content {
-  background: var(--gray-100);
-  color: var(--text-primary);
-  border-bottom-left-radius: 4px;
-}
-
-.message.loading {
-  opacity: 0.8;
-}
-
-.message p {
-  margin: 0;
-}
-
-.message small {
-  display: block;
+.agent-bubbles :deep(.ant-bubble-footer) {
   margin-top: 6px;
-  font-size: 0.75rem;
-  opacity: 0.75;
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
-/* 打字指示器 */
-.typing-indicator {
+.agent-prompts {
+  margin: 4px 0 8px;
+}
+
+.agent-prompts :deep(.ant-prompts-item) {
+  border-radius: 14px;
+  background: rgba(238, 248, 241, 0.88);
+  border-color: rgba(50, 143, 98, 0.14);
+}
+
+.agent-sender {
+  border-radius: 24px;
+  box-shadow: 0 12px 30px rgba(50, 143, 98, 0.12);
+}
+
+.agent-sender :deep(.ant-sender-prefix) {
   display: flex;
-  gap: 4px;
-  padding: 4px 0;
-}
-
-.typing-indicator span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  animation: typing-bounce 1.2s ease-in-out infinite;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes typing-bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  30% {
-    transform: translateY(-6px);
-    opacity: 1;
-  }
-}
-
-/* 快捷问题 */
-.quick-questions {
-  padding: var(--spacing-sm) var(--spacing-md);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  border-top: 1px solid var(--border-light);
-}
-
-.quick-btn {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--border-light);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.quick-btn:hover {
-  border-color: var(--primary-500);
-  color: var(--primary-600);
-  background: var(--primary-50);
-}
-
-/* 输入区域 */
-.input-section {
-  display: flex;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-top: 1px solid var(--border-light);
-  background: var(--bg-primary);
   align-items: center;
+  gap: 2px;
+  color: var(--primary-700);
 }
 
-.voice-btn.listening {
-  color: var(--error);
-  animation: status-pulse 1s ease-in-out infinite;
+.agent-sender :deep(.ant-sender-prefix .ant-btn) {
+  color: var(--primary-700);
 }
 
-.input-section .input {
-  flex: 1;
-  border: 1px solid var(--border-light);
-  padding: 10px 14px;
-  font-size: 0.875rem;
+.hidden-file {
+  display: none;
 }
 
-.send-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.image-tray {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 10px;
+  overflow-x: auto;
+}
+
+.image-tray button {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 1px solid rgba(50, 143, 98, 0.22);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--primary-50);
+  cursor: pointer;
+}
+
+.image-tray img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-tray span {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 2px 0;
+  color: #fff;
+  background: rgba(23, 62, 46, 0.78);
+  font-size: 11px;
+}
+
+.voice-status {
+  margin: 0 0 8px;
+  color: var(--primary-700);
+  font-size: 12px;
+}
+
+.listening {
+  color: var(--primary-600);
 }
 
 @media (max-width: 768px) {
-  .assistant-container,
-  .floating-assistant.expanded .assistant-container {
-    width: calc(100vw - 32px);
-    max-height: calc(100vh - 100px);
-    right: 16px;
+  .floating-assistant {
+    right: 12px;
+    bottom: 76px;
+    width: min(430px, calc(100vw - 24px));
+    height: min(680px, calc(100vh - 100px));
+    --agent-panel-width: min(350px, calc(100vw - 32px));
+    --agent-panel-height: 248px;
+    --agent-avatar-width: clamp(310px, 50vh, 410px);
+    --agent-avatar-frame-height: min(390px, calc(100vh - 246px));
+    --agent-avatar-stage-height: min(680px, calc(100vh + 40px));
   }
 
-  .floating-assistant {
-    right: 16px;
-    bottom: 80px;
+  .agent-panel {
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  .avatar-float {
+    right: 50%;
+    transform: translateX(50%);
   }
 }
 </style>
