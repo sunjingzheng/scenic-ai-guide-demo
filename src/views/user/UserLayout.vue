@@ -14,16 +14,13 @@ const navItems = [
   { path: '/home', icon: Home, label: '首页' },
   { path: '/overview', icon: Map, label: '园区总览' },
   { path: '/spots', icon: Compass, label: '景点探索' },
-  { path: '/guide', icon: MessageCircle, label: '数字导员' },
   { path: '/routes', icon: Route, label: '路线推荐' },
   { path: '/profile', icon: User, label: '个人中心' }
 ]
 
-// For mobile: show primary nav items (limit to 5 per bottom nav guidelines)
 const mobileNavItems = [
   { path: '/home', icon: Home, label: '首页' },
   { path: '/overview', icon: Map, label: '总览' },
-  { path: '/guide', icon: MessageCircle, label: '导览' },
   { path: '/routes', icon: Route, label: '路线' },
   { path: '/profile', icon: User, label: '我的' }
 ]
@@ -38,7 +35,7 @@ const routeAnnouncements: Record<string, { text: string; audioUrl: string }> = {
     audioUrl: '/audio/route-intros/home.wav'
   },
   '/overview': {
-    text: '这里是园区总览。您可以按景区筛选灵山大佛、九龙灌浴和拈花湾，也可以搜索景点名称，我会结合知识库为您讲解每一处景点的文化亮点。',
+    text: '这里是园区总览，包含交互式俯瞰地图和景点列表。点击地图热区可跳转视角，也可按景区筛选和搜索景点，我会结合知识库为您讲解每一处景点的文化亮点。',
     audioUrl: '/audio/route-intros/overview.wav'
   },
   '/routes': {

@@ -97,7 +97,21 @@ const filteredRoutes = computed(() => {
 })
 
 onMounted(() => {
-  store.loadBaseData()
+  store.loadBaseData().then(async () => {
+    await store.loadAllRoutes()
+    routeTemplates.value = store.routes.map((route) => ({
+      id: route.id,
+      title: route.title,
+      duration: route.duration,
+      difficulty: route.difficulty || '轻松',
+      interest: route.interest,
+      summary: route.summary,
+      stops: route.stops,
+      highlights: route.focus?.length ? route.focus : ['智能讲解', '知识库推荐'],
+      bestTime: route.bestTime || '全天',
+      tips: route.tips || '可在数字人导览页继续提问该路线的细节'
+    }))
+  })
 })
 
 function selectRoute(routeId: string) {

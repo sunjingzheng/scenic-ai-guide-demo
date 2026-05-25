@@ -1,24 +1,20 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
-import { playGuideAudioUrl, playGuideTTS } from '../features/guideTts'
+import { playGuideAudioUrl, playGuideTTS, StreamingTTSPlayer } from '../features/guideTts'
 import type {
   AvatarConfig,
-  BridgeConfig,
   ChatMessage,
-  DashboardOverview,
   RoutePlan,
   RuntimeAIConfig,
   Spot,
   TTSConfig,
-  TTSStatus
 } from '../types'
 
 export const useGuideStore = defineStore('guide', () => {
   const sessionId = `scenic-demo-${Date.now()}-${Math.random().toString(16).slice(2)}`
   const spots = ref<Spot[]>([])
   const routes = ref<RoutePlan[]>([])
-  const dashboard = ref<DashboardOverview | null>(null)
   const messages = ref<ChatMessage[]>([
     {
       role: 'assistant',
@@ -30,10 +26,9 @@ export const useGuideStore = defineStore('guide', () => {
   const currentEmotion = ref('smile')
   const speaking = ref(false)
   const loading = ref(false)
+  const chatExpanded = ref(0)
   const aiConfig = ref<RuntimeAIConfig | null>(null)
   const ttsConfig = ref<TTSConfig | null>(null)
-  const ttsStatus = ref<TTSStatus | null>(null)
-  const bridgeConfig = ref<BridgeConfig | null>(null)
   const avatarConfig = ref<AvatarConfig>({
     outfit: '禅意青绿',
     voice: '温柔讲解女声',
@@ -73,59 +68,37 @@ export const useGuideStore = defineStore('guide', () => {
     }
   }
 
-  async function loadDashboard() {
-    dashboard.value = await api.getDashboard()
-  }
-
   async function loadAIConfig() {
     aiConfig.value = await api.getAIConfig()
   }
 
-  async function saveAIConfig(config: RuntimeAIConfig) {
-    const result = await api.saveAIConfig(config)
-    aiConfig.value = result.config
-  }
-
   async function loadTTSConfig() {
     const config = await api.getTTSConfig() as TTSConfig
-    ttsConfig.value = config
-    avatarConfig.value = {
-      ...avatarConfig.value,
-      ttsSpeaker: config.speaker,
-      ttsLanguage: config.language,
-      preferLocalTTS: config.enabled
+    if (config) {
+      ttsConfig.value = config
+      avatarConfig.value = {
+        ...avatarConfig.value,
+        ttsSpeaker: config.speaker,
+        ttsLanguage: config.language,
+        preferLocalTTS: config.enabled
+      }
     }
   }
 
-  async function saveTTSConfig(config: TTSConfig) {
-    const result = await api.saveTTSConfig(config)
-    ttsConfig.value = result.config
-    avatarConfig.value = {
-      ...avatarConfig.value,
-      ttsSpeaker: result.config.speaker,
-      ttsLanguage: result.config.language,
-      preferLocalTTS: result.config.enabled
-    }
-  }
-
-  async function refreshTTSStatus() {
-    ttsStatus.value = await api.getTTSStatus()
-  }
-
-  async function loadBridgeConfig() {
-    bridgeConfig.value = await api.getBridgeConfig()
-  }
-
-  async function saveBridgeConfig(config: BridgeConfig) {
-    const result = await api.saveBridgeConfig(config)
-    bridgeConfig.value = result.config
-  }
+  const ttsPlayer = new StreamingTTSPlayer()
+  ttsPlayer.onPlayingChange = (v: boolean) => { speaking.value = v }
 
   async function ask(text: string, imageUrls: string[] = []) {
     if (!text.trim() && !imageUrls.length) return
     const displayText = text.trim() || '请看这张图片'
+    chatExpanded.value += 1
     messages.value.push({ role: 'user', text: imageUrls.length ? `${displayText}\n（已上传 ${imageUrls.length} 张图片）` : displayText, imageUrls })
     loading.value = true
+
+    // 启动流式 TTS（AI 文字边生成边播）
+    if (avatarConfig.value.voiceEnabled !== false && ttsConfig.value?.enabled) {
+      ttsPlayer.start(ttsConfig.value)
+    }
 
     try {
       const assistantMessage: ChatMessage = {
@@ -147,15 +120,19 @@ export const useGuideStore = defineStore('guide', () => {
         onDelta(delta) {
           assistantMessage.text += delta
           messages.value = [...messages.value]
+          ttsPlayer.addText(delta)
         }
       })
+
+      // 播放剩余缓冲文字
+      await ttsPlayer.flush()
+
       currentEmotion.value = result.emotion
       routes.value = result.recommendations
       assistantMessage.text = result.answer
       assistantMessage.emotion = result.emotion
       assistantMessage.references = result.references
       messages.value = [...messages.value]
-      void speak(result.speechText)
     } finally {
       loading.value = false
     }
@@ -163,6 +140,8 @@ export const useGuideStore = defineStore('guide', () => {
 
   async function speak(text: string) {
     if (avatarConfig.value.voiceEnabled === false) return
+    // 停掉流式播放器，避免冲突
+    ttsPlayer.stop()
     speaking.value = true
     try {
       await playGuideTTS(text, {
@@ -193,40 +172,47 @@ export const useGuideStore = defineStore('guide', () => {
     routes.value = await api.recommendRoutes(interest)
   }
 
+  async function loadAllRoutes() {
+    routes.value = await api.getRoutes()
+  }
+
   async function saveAvatar(config: AvatarConfig) {
     const result = await api.saveAvatar(config)
     avatarConfig.value = result.config
   }
 
+  async function submitFeedback(rating: number, category: 'service' | 'route' | 'knowledge' | 'bug' | 'suggestion', content: string) {
+    return api.submitFeedback({
+      sessionId,
+      rating,
+      category,
+      content
+    })
+  }
+
   return {
+    sessionId,
     spots,
     routes,
-    dashboard,
     messages,
     currentInterest,
     currentEmotion,
     speaking,
     loading,
+    chatExpanded,
     aiConfig,
     ttsConfig,
-    ttsStatus,
-    bridgeConfig,
     avatarConfig,
     featuredSpots,
     loadBaseData,
-    loadDashboard,
     loadAIConfig,
-    saveAIConfig,
     loadTTSConfig,
-    saveTTSConfig,
-    refreshTTSStatus,
-    loadBridgeConfig,
-    saveBridgeConfig,
     loadAvatarConfig,
     ask,
     speak,
     speakAudioUrl,
     updateInterest,
-    saveAvatar
+    loadAllRoutes,
+    submitFeedback
   }
 })

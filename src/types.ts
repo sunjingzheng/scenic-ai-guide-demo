@@ -18,7 +18,10 @@ export type RoutePlan = {
   title: string
   interest: string
   duration: string
+  difficulty?: string
   summary: string
+  bestTime?: string
+  tips?: string
   stops: string[]
   focus: string[]
 }
@@ -38,6 +41,15 @@ export type ChatResponse = {
   references: Spot[]
   recommendations: RoutePlan[]
   modelProvider: string
+  latencyMs?: number
+}
+
+export type FeedbackPayload = {
+  sessionId?: string
+  interactionId?: number
+  rating: number
+  category: 'service' | 'route' | 'knowledge' | 'bug' | 'suggestion'
+  content: string
 }
 
 export type ProviderConfig = {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Bot, ChevronDown, ImagePlus, Maximize2, Mic, Minimize2, Square, X } from 'lucide-vue-next'
 import { BubbleList, Sender, XProvider } from 'ant-design-x-vue'
 import { Badge } from 'ant-design-vue'
@@ -7,9 +8,11 @@ import AvatarGuide from './AvatarGuide.vue'
 import { useGuideStore } from '../stores/useGuideStore'
 import { DEFAULT_CHAT_EXPANDED } from '../features/avatarPanel'
 
+const route = useRoute()
 const store = useGuideStore()
+const isHomePage = computed(() => route.path === '/home')
 const input = ref('')
-const isExpanded = ref(DEFAULT_CHAT_EXPANDED)
+const isExpanded = ref(store.chatExpanded > 0 || DEFAULT_CHAT_EXPANDED)
 const isMinimized = ref(false)
 const recognitionState = ref<'idle' | 'listening' | 'unsupported'>('idle')
 const chatBody = ref<HTMLElement | null>(null)
@@ -67,6 +70,15 @@ watch(
   () => [store.messages.length, store.messages[store.messages.length - 1]?.text, store.loading],
   () => nextTick(scrollToBottom),
   { deep: true }
+)
+
+watch(
+  () => store.chatExpanded,
+  () => {
+    isExpanded.value = true
+    isMinimized.value = false
+    nextTick(scrollToBottom)
+  }
 )
 
 function submit(text = input.value) {
@@ -202,7 +214,7 @@ function toggleMinimize() {
 
 <template>
   <XProvider>
-    <div class="floating-assistant" :class="{ expanded: isExpanded, minimized: isMinimized }">
+    <div v-if="!isHomePage" class="floating-assistant" :class="{ expanded: isExpanded, minimized: isMinimized }">
       <button v-if="isMinimized" class="agent-orb" type="button" @click="toggleMinimize">
         <Bot :size="24" />
       </button>
