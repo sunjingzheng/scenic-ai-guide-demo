@@ -1,5 +1,6 @@
 import { requestGptSoVitsTTS } from '../api/tts'
 import { getLive2DHandler, stopLive2DAudio } from './live2dBridge'
+import { StreamingWavPlayer } from './streamingWavPlayer'
 import type { TTSConfig } from '../types'
 
 let playGeneration = 0
@@ -165,95 +166,95 @@ export async function playGuideTTS(
   await speakWithBrowser(cleaned, options.rate, options.pitch)
 }
 
-/* ── 流式 TTS 播放器：每个标点切句，串行队列播放保证顺序 ── */
+/* ── 整段文本流式播放器:AI 完整生成完毕后,一次性整段送 GPT-SoVITS,
+       流式接收 wav,边接边播,实现实时性 ── */
 
-const RE_PUNCT = /[。，！？,、；;：:！？!?…\n\r]/g
+function buildStreamPayload(text: string, config: TTSConfig) {
+  const gptSoVits = (config as any).gptSoVits
+  // 占位符路径(/absolute/path/to/...)不要传给后端,让后端用默认参考音频
+  const rawRef = gptSoVits?.refAudioPath
+  const refAudioPath = rawRef && !rawRef.startsWith('/absolute/path/to') ? rawRef : undefined
+  const rawPrompt = gptSoVits?.promptText
+  const promptText = rawPrompt && !rawPrompt.includes('这里填写参考音频') ? rawPrompt : undefined
+  return {
+    input: text,
+    text,
+    text_lang: gptSoVits?.textLang || config.language || 'zh',
+    prompt_lang: gptSoVits?.promptLang || 'zh',
+    text_split_method: gptSoVits?.textSplitMethod || 'cut5',
+    media_type: 'wav',
+    speed_factor: gptSoVits?.speedFactor ?? 1,
+    top_k: gptSoVits?.topK ?? 15,
+    top_p: gptSoVits?.topP ?? 1,
+    temperature: gptSoVits?.temperature ?? 1,
+    repetition_penalty: gptSoVits?.repetitionPenalty ?? 1.35,
+    parallel_infer: gptSoVits?.parallelInfer ?? true,
+    ...(refAudioPath ? { ref_audio_path: refAudioPath } : {}),
+    ...(promptText ? { prompt_text: promptText } : {}),
+  }
+}
 
 export class StreamingTTSPlayer {
+  private player = new StreamingWavPlayer()
+  private config: TTSConfig | null = null
   private buffer = ''
   private stopped = false
-  private config: TTSConfig | null = null
-  private queue: string[] = []
-  private processing = false
+  private currentPlay: Promise<void> | null = null
   onPlayingChange: ((playing: boolean) => void) | null = null
 
+  constructor() {
+    this.player.onPlayingChange = (v) => this.onPlayingChange?.(v)
+  }
+
   start(config: TTSConfig) {
+    this.config = config
     this.buffer = ''
     this.stopped = false
-    this.config = config
-    this.queue = []
-    this.processing = false
+    this.currentPlay = null
     stopLive2DAudio()
   }
 
+  // 兼容旧接口,流式 AI 把 delta 全部累积起来,在 flush 时一次性合成
   addText(delta: string) {
-    if (this.stopped || !this.config) return
+    if (this.stopped) return
     this.buffer += delta
+  }
 
-    // 每个标点都切，至少 1 个字
-    RE_PUNCT.lastIndex = 0
-    let lastEnd = 0
-    let match: RegExpExecArray | null
-    while ((match = RE_PUNCT.exec(this.buffer)) !== null) {
-      const end = match.index + 1
-      const chunk = this.buffer.slice(lastEnd, end).trim()
-      if (chunk) {
-        this.queue.push(chunk)
-        this._processQueue()
-      }
-      lastEnd = end
-    }
-    this.buffer = this.buffer.slice(lastEnd)
+  // 直接整段播放,跳过累积流程(配合 ask 改造后的新调用方式)
+  speakAll(text: string) {
+    if (!this.config || this.stopped) return
+    const cleaned = cleanForTTS(text)
+    if (!cleaned) return
+    const baseUrl = this.config.baseUrl?.replace(/\/$/, '') || ''
+    const url = `${baseUrl}/api/tts/emotion/stream`
+    this.currentPlay = this.player.play(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildStreamPayload(cleaned, this.config)),
+    }).catch((err) => {
+      if ((err as DOMException)?.name === 'AbortError') return
+      console.warn('[TTS] streaming play failed', err)
+    })
   }
 
   async flush() {
-    const remaining = this.buffer.trim()
+    const text = this.buffer.trim()
     this.buffer = ''
-    if (remaining && !this.stopped && this.config) {
-      this.queue.push(remaining)
+    if (text && this.config && !this.stopped) {
+      this.speakAll(text)
     }
-    this._processQueue()
-    // 等队列全部播完
-    while (this.processing && !this.stopped) {
-      await new Promise((r) => setTimeout(r, 50))
+    if (this.currentPlay) {
+      await this.currentPlay
+      this.currentPlay = null
     }
   }
 
   stop() {
     this.stopped = true
-    this.queue = []
-    this.processing = false
+    this.buffer = ''
+    this.player.stop()
+    this.currentPlay = null
     stopLive2DAudio()
-  }
-
-  private _processQueue() {
-    if (this.processing || this.stopped) return
-    this.processing = true
-    this._playNext().finally(() => {
-      this.processing = false
-      this.onPlayingChange?.(false)
-    })
-  }
-
-  private async _playNext() {
-    while (this.queue.length > 0 && !this.stopped) {
-      const text = this.queue.shift()!
-      const cleaned = cleanForTTS(text)
-      if (!cleaned) continue
-
-      this.onPlayingChange?.(true)
-      try {
-        const audio = await requestGptSoVitsTTS(cleaned, this.config!)
-        if (this.stopped) return
-
-        const synced = await playWithLive2D(audio.buffer)
-        if (!synced) {
-          await playWithAudioElement(audio.buffer, audio.contentType)
-        }
-      } catch {
-        // TTS 失败静默跳过
-      }
-    }
   }
 }
 

@@ -95,10 +95,8 @@ export const useGuideStore = defineStore('guide', () => {
     messages.value.push({ role: 'user', text: imageUrls.length ? `${displayText}\n（已上传 ${imageUrls.length} 张图片）` : displayText, imageUrls })
     loading.value = true
 
-    // 启动流式 TTS（AI 文字边生成边播）
-    if (avatarConfig.value.voiceEnabled !== false && ttsConfig.value?.enabled) {
-      ttsPlayer.start(ttsConfig.value)
-    }
+    // AI 生成完成后再启动 TTS,所以这里只先停掉上一次的播放
+    ttsPlayer.stop()
 
     try {
       const assistantMessage: ChatMessage = {
@@ -120,12 +118,8 @@ export const useGuideStore = defineStore('guide', () => {
         onDelta(delta) {
           assistantMessage.text += delta
           messages.value = [...messages.value]
-          ttsPlayer.addText(delta)
         }
       })
-
-      // 播放剩余缓冲文字
-      await ttsPlayer.flush()
 
       currentEmotion.value = result.emotion
       routes.value = result.recommendations
@@ -133,6 +127,12 @@ export const useGuideStore = defineStore('guide', () => {
       assistantMessage.emotion = result.emotion
       assistantMessage.references = result.references
       messages.value = [...messages.value]
+
+      // AI 完整生成完毕,整段送 TTS,流式接收边接边播
+      if (avatarConfig.value.voiceEnabled !== false && ttsConfig.value?.enabled && result.answer) {
+        ttsPlayer.start(ttsConfig.value)
+        ttsPlayer.speakAll(result.answer)
+      }
     } finally {
       loading.value = false
     }
