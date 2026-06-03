@@ -216,3 +216,16 @@ export type AvatarConfig = {
   preferLocalTTS?: boolean
   live2d?: Live2DConfig
 }
+
+export type Outfit = {
+  id: number
+  name: string
+  imagePath: string
+  imageUrl: string
+  modelUrl: string
+  description: string
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}

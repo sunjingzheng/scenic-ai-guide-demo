@@ -1,31 +1,41 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import Live2DAvatar from './Live2DAvatar.vue'
-import type { Live2DConfig } from '../types'
+import { computed, ref, watch } from "vue";
+import Live2DAvatar from "./Live2DAvatar.vue";
+import type { Live2DConfig } from "../types";
 
 const props = defineProps<{
-  speaking: boolean
-  emotion: string
-  outfit: string
-  live2d?: Live2DConfig
-}>()
+  speaking: boolean;
+  emotion: string;
+  outfit: string;
+  outfitImage?: string;
+  outfitModelUrl?: string;
+  live2d?: Live2DConfig;
+}>();
 
-const live2dFailed = ref(false)
-const eyeClass = computed(() => (props.emotion === 'thinking' ? 'thinking' : 'bright'))
+const live2dFailed = ref(false);
+const eyeClass = computed(() =>
+  props.emotion === "thinking" ? "thinking" : "bright",
+);
 const mouthClass = computed(() =>
-  props.speaking ? 'speaking' : props.emotion === 'smile' || props.emotion === 'happy' ? 'smile' : 'calm'
-)
-const live2dKey = computed(() => JSON.stringify(props.live2d || {}))
-const live2dErrorText = computed(() => (live2dFailed.value ? 'Live2D 加载中断，请检查模型资源' : 'Live2D 未启用'))
-const showFallback = computed(() => props.live2d?.enabled === false)
+  props.speaking
+    ? "speaking"
+    : props.emotion === "smile" || props.emotion === "happy"
+      ? "smile"
+      : "calm",
+);
+const live2dKey = computed(() => JSON.stringify(props.live2d || {}));
+const live2dErrorText = computed(() =>
+  live2dFailed.value ? "Live2D 加载中断，请检查模型资源" : "Live2D 未启用",
+);
+const showFallback = computed(() => props.live2d?.enabled === false);
 
 watch(live2dKey, () => {
-  live2dFailed.value = false
-})
+  live2dFailed.value = false;
+});
 
 function handleLive2DError(message: string) {
-  live2dFailed.value = true
-  console.warn(`[Live2D] ${message}`)
+  live2dFailed.value = true;
+  console.warn(`[Live2D] ${message}`);
 }
 </script>
 
@@ -37,10 +47,13 @@ function handleLive2DError(message: string) {
       :speaking="speaking"
       :emotion="emotion"
       :config="live2d"
+      :model-url="outfitModelUrl"
       @error="handleLive2DError"
     />
     <div v-else class="halo"></div>
-    <div v-if="live2dFailed && !showFallback" class="live2d-status">{{ live2dErrorText }}</div>
+    <div v-if="live2dFailed && !showFallback" class="live2d-status">
+      {{ live2dErrorText }}
+    </div>
     <div v-if="showFallback" class="avatar">
       <div class="hair"></div>
       <div class="head">
@@ -53,7 +66,13 @@ function handleLive2DError(message: string) {
       <div class="neck"></div>
       <div class="body">
         <div class="robe">
-          <span></span>
+          <img
+            v-if="outfitImage"
+            :src="outfitImage"
+            :alt="outfit"
+            class="outfit-img"
+          />
+          <span v-else></span>
           <strong>{{ outfit }}</strong>
         </div>
       </div>
@@ -69,7 +88,7 @@ function handleLive2DError(message: string) {
 <style scoped>
 .avatar-stage {
   position: relative;
-  min-height: 440px;
+  min-height: 520px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -77,8 +96,8 @@ function handleLive2DError(message: string) {
 
 .halo {
   position: absolute;
-  width: 270px;
-  height: 270px;
+  width: 330px;
+  height: 330px;
   border: 1px solid rgba(244, 201, 93, 0.45);
   border-radius: 50%;
   box-shadow: inset 0 0 50px rgba(244, 201, 93, 0.1);
@@ -111,19 +130,19 @@ function handleLive2DError(message: string) {
 }
 
 .hair {
-  width: 142px;
-  height: 88px;
-  margin-bottom: -56px;
-  border-radius: 72px 72px 34px 34px;
+  width: 178px;
+  height: 110px;
+  margin-bottom: -70px;
+  border-radius: 90px 90px 42px 42px;
   background: linear-gradient(145deg, #1b1c23, #453334);
 }
 
 .head {
   position: relative;
-  width: 126px;
-  height: 146px;
+  width: 158px;
+  height: 182px;
   border: 2px solid rgba(255, 235, 200, 0.45);
-  border-radius: 56px 56px 48px 48px;
+  border-radius: 70px 70px 60px 60px;
   background: linear-gradient(165deg, #ffe0bf, #c98f69);
 }
 
@@ -135,82 +154,82 @@ function handleLive2DError(message: string) {
 }
 
 .eye {
-  top: 60px;
-  width: 12px;
-  height: 12px;
+  top: 75px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: #172124;
 }
 
 .eye.left {
-  left: 36px;
+  left: 45px;
 }
 
 .eye.right {
-  right: 36px;
+  right: 45px;
 }
 
 .eye.thinking {
-  top: 64px;
-  height: 5px;
+  top: 80px;
+  height: 6px;
   border-radius: 8px;
 }
 
 .brow {
-  top: 47px;
-  width: 22px;
-  height: 4px;
+  top: 58px;
+  width: 28px;
+  height: 5px;
   border-radius: 8px;
   background: rgba(80, 50, 44, 0.72);
 }
 
 .brow.left {
-  left: 29px;
+  left: 36px;
 }
 
 .brow.right {
-  right: 29px;
+  right: 36px;
 }
 
 .mouth {
   left: 50%;
-  bottom: 32px;
+  bottom: 40px;
   transform: translateX(-50%);
   background: #8b3d44;
   transition: 0.2s ease;
 }
 
 .mouth.calm {
-  width: 34px;
-  height: 6px;
+  width: 42px;
+  height: 8px;
   border-radius: 8px;
 }
 
 .mouth.smile {
-  width: 42px;
-  height: 22px;
-  border-radius: 0 0 34px 34px;
+  width: 52px;
+  height: 28px;
+  border-radius: 0 0 44px 44px;
 }
 
 .mouth.speaking {
-  width: 28px;
-  height: 34px;
+  width: 35px;
+  height: 42px;
   border-radius: 50%;
   animation: talk 0.34s infinite alternate;
 }
 
 .neck {
-  width: 42px;
-  height: 30px;
+  width: 52px;
+  height: 38px;
   background: #c58c69;
 }
 
 .body {
-  width: 220px;
-  height: 190px;
+  width: 270px;
+  height: 230px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 80px 80px 28px 28px;
+  border-radius: 100px 100px 36px 36px;
   background: linear-gradient(140deg, #1f8b7a, #0d4b4f 48%, #d2a74b);
 }
 
@@ -221,15 +240,25 @@ function handleLive2DError(message: string) {
   color: #fff9d6;
 }
 
+.robe .outfit-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 .robe span {
   width: 2px;
-  height: 160px;
+  height: 200px;
   background: rgba(255, 239, 170, 0.7);
 }
 
 .robe strong {
-  margin-top: -56px;
-  font-size: 14px;
+  margin-top: -70px;
+  font-size: 16px;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .voice-rings {
@@ -242,8 +271,8 @@ function handleLive2DError(message: string) {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 220px;
-  height: 220px;
+  width: 270px;
+  height: 270px;
   border: 1px solid rgba(97, 230, 198, 0.42);
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0.82);
@@ -264,11 +293,11 @@ function handleLive2DError(message: string) {
 
 @keyframes talk {
   from {
-    height: 18px;
+    height: 22px;
   }
 
   to {
-    height: 36px;
+    height: 44px;
   }
 }
 

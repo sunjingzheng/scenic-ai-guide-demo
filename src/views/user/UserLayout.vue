@@ -1,75 +1,50 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { RouterView, useRouter, useRoute } from 'vue-router'
-import { Bot, Landmark, MessageCircle } from 'lucide-vue-next'
-import FloatingAvatar from '../../components/FloatingAvatar.vue'
-import { useGuideStore } from '../../stores/useGuideStore'
+import { onMounted, ref } from "vue";
+import { RouterView, useRouter, useRoute } from "vue-router";
+import { Bot, Landmark, MessageCircle } from "lucide-vue-next";
+import FloatingAvatar from "../../components/FloatingAvatar.vue";
+import FeedbackPanel from "../../components/FeedbackPanel.vue";
+import { useGuideStore } from "../../stores/useGuideStore";
 
-const router = useRouter()
-const route = useRoute()
-const store = useGuideStore()
-const lastSpokenPath = ref('')
+const router = useRouter();
+const route = useRoute();
+const store = useGuideStore();
+const hasGreeted = ref(false);
 
 const navItems = [
-  { mode: 'guide' as const, icon: Bot, label: '导员模式' },
-  { mode: 'qa' as const, icon: MessageCircle, label: '问答模式' }
-]
+  { mode: "guide" as const, icon: Bot, label: "导游模式" },
+  { mode: "qa" as const, icon: MessageCircle, label: "问答模式" },
+];
 
-function isActiveMode(mode: 'guide' | 'qa') {
-  return route.path === '/home' && (route.query.mode === mode || (!route.query.mode && mode === 'guide'))
+function isActiveMode(mode: "guide" | "qa") {
+  return (
+    route.path === "/home" &&
+    (route.query.mode === mode || (!route.query.mode && mode === "guide"))
+  );
 }
 
-function goMode(mode: 'guide' | 'qa') {
-  void router.push({ path: '/home', query: { mode } })
+function goMode(mode: "guide" | "qa") {
+  void router.push({ path: "/home", query: { mode } });
 }
 
-const routeAnnouncements: Record<string, { text: string; audioUrl: string }> = {
-  '/home': {
-    text: '您好，欢迎来到灵山胜境智慧导览。我是 Hiyori，您的 AI 数字人导游。您可以进入导员模式让我自动选线并依次讲解，也可以进入问答模式上传图片做多模态问答。',
-    audioUrl: '/audio/route-intros/home.wav'
-  },
-  '/overview': {
-    text: '这里是园区总览，包含交互式俯瞰地图和景点列表。点击地图热区可跳转视角，也可按景区筛选和搜索景点，我会结合知识库为您讲解每一处景点的文化亮点。',
-    audioUrl: '/audio/route-intros/overview.wav'
-  },
-  '/routes': {
-    text: '这里是路线推荐。我可以根据历史文化、祈福朝圣、自然风光或亲子休闲，为您推荐半日游、一日游和夜游路线。',
-    audioUrl: '/audio/route-intros/routes.wav'
-  }
-}
+async function speakGreeting() {
+  if (hasGreeted.value) return;
+  hasGreeted.value = true;
 
-function preloadRouteIntroAudio() {
-  for (const item of Object.values(routeAnnouncements)) {
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'audio'
-    link.href = item.audioUrl
-    document.head.appendChild(link)
-    void fetch(item.audioUrl).catch(() => {})
-  }
-}
+  await store.loadBaseData();
 
-async function speakRouteIntro(path: string) {
-  const intro = routeAnnouncements[path]
-  if (!intro || lastSpokenPath.value === path) return
-  lastSpokenPath.value = path
-  await store.loadBaseData()
+  const { autoGreeting, greetingText } = store.avatarConfig;
+  if (!autoGreeting || !greetingText) return;
+
+  // 等 TTS 和 Live2D 初始化好再播
   window.setTimeout(() => {
-    void store.speakAudioUrl(intro.audioUrl, intro.text)
-  }, 120)
+    void store.speak(greetingText);
+  }, 800);
 }
 
 onMounted(() => {
-  preloadRouteIntroAudio()
-  void speakRouteIntro(route.path)
-})
-
-watch(
-  () => route.path,
-  (path) => {
-    void speakRouteIntro(path)
-  }
-)
+  void speakGreeting();
+});
 </script>
 
 <template>
@@ -107,6 +82,9 @@ watch(
 
     <!-- 浮动数字人助手 -->
     <FloatingAvatar />
+
+    <!-- 意见反馈 -->
+    <FeedbackPanel />
 
     <!-- 移动端底部导航栏 -->
     <nav class="bottom-nav">
@@ -316,7 +294,9 @@ watch(
   }
 
   .footer {
-    padding-bottom: calc(var(--spacing-lg) + 70px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(
+      var(--spacing-lg) + 70px + env(safe-area-inset-bottom, 0px)
+    );
   }
 }
 </style>

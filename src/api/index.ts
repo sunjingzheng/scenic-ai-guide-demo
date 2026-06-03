@@ -102,7 +102,7 @@ export const api = {
     try {
       const stored = readStored('scenic.ai.config')
       const remote = await apiGet('/api/config/ai').then((r) => r.data)
-      return { ...remote, ...stored }
+      return { ...stored, ...remote }
     } catch {
       return readStored('scenic.ai.config') || null
     }
@@ -112,7 +112,7 @@ export const api = {
     try {
       const stored = readStored('scenic.tts.config')
       const remote = await apiGet('/api/config/tts').then((r) => r.data)
-      return { ...remote, ...stored }
+      return { ...stored, ...remote }
     } catch {
       return readStored('scenic.tts.config') || null
     }
@@ -122,7 +122,7 @@ export const api = {
     try {
       const stored = readStored('scenic.avatar.config')
       const remote = await apiGet('/api/config/avatar').then((r) => r.data)
-      return { ...remote, ...stored }
+      return { ...stored, ...remote }
     } catch {
       return readStored('scenic.avatar.config') || null
     }
@@ -151,6 +151,10 @@ export const api = {
 
   submitFeedback(payload: FeedbackPayload) {
     return apiPost('/api/feedback', payload).then((r) => r.data)
+  },
+
+  getOutfits(): Promise<any[]> {
+    return apiGet('/api/outfits').then((r) => r.data)
   }
 }
 

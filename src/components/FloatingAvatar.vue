@@ -1,230 +1,275 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Bot, ChevronDown, ImagePlus, Maximize2, Mic, Minimize2, Square, X } from 'lucide-vue-next'
-import { BubbleList, Sender, XProvider } from 'ant-design-x-vue'
-import { Badge } from 'ant-design-vue'
-import AvatarGuide from './AvatarGuide.vue'
-import { useGuideStore } from '../stores/useGuideStore'
-import { DEFAULT_CHAT_EXPANDED } from '../features/avatarPanel'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
+import { useRoute } from "vue-router";
+import {
+  Bot,
+  ChevronDown,
+  ImagePlus,
+  Maximize2,
+  Mic,
+  Minimize2,
+  Square,
+  X,
+} from "lucide-vue-next";
+import { BubbleList, Sender, XProvider } from "ant-design-x-vue";
+import { Badge } from "ant-design-vue";
+import AvatarGuide from "./AvatarGuide.vue";
+import { useGuideStore } from "../stores/useGuideStore";
+import { DEFAULT_CHAT_EXPANDED } from "../features/avatarPanel";
 
-const route = useRoute()
-const store = useGuideStore()
-const isHomePage = computed(() => route.path === '/home')
-const input = ref('')
-const isExpanded = ref(store.chatExpanded > 0 || DEFAULT_CHAT_EXPANDED)
-const isMinimized = ref(false)
-const recognitionState = ref<'idle' | 'listening' | 'unsupported'>('idle')
-const chatBody = ref<HTMLElement | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
-const selectedImages = ref<string[]>([])
-const continuousVoice = ref(false)
-const interimText = ref('')
-let recognition: SpeechRecognition | null = null
+const route = useRoute();
+const store = useGuideStore();
+const isHomePage = computed(() => route.path === "/home");
+const input = ref("");
+const isExpanded = ref(store.chatExpanded > 0 || DEFAULT_CHAT_EXPANDED);
+const isMinimized = ref(false);
+const recognitionState = ref<"idle" | "listening" | "unsupported">("idle");
+const chatBody = ref<HTMLElement | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const selectedImages = ref<string[]>([]);
+const continuousVoice = ref(false);
+const interimText = ref("");
+let recognition: SpeechRecognition | null = null;
 
 const bubbleRoles = {
   assistant: {
-    placement: 'start',
-    variant: 'shadow',
+    placement: "start",
+    variant: "shadow",
     avatar: {
-      style: { background: '#eaf7ef', color: '#25754f' },
-      icon: '灵'
-    }
+      style: { background: "#eaf7ef", color: "#25754f" },
+      icon: "灵",
+    },
   },
   user: {
-    placement: 'end',
-    variant: 'filled',
+    placement: "end",
+    variant: "filled",
     avatar: {
-      style: { background: '#328f62', color: '#fff' },
-      icon: '我'
-    }
-  }
-} as const
+      style: { background: "#328f62", color: "#fff" },
+      icon: "我",
+    },
+  },
+} as const;
 
 const bubbleItems = computed(() =>
   store.messages.map((message, index) => ({
     key: index,
     role: message.role,
-    content: message.text || (message.role === 'assistant' && store.loading ? '正在检索知识库...' : ''),
-    loading: message.role === 'assistant' && !message.text && store.loading,
+    content:
+      message.text ||
+      (message.role === "assistant" && store.loading
+        ? "正在检索知识库..."
+        : ""),
+    loading: message.role === "assistant" && !message.text && store.loading,
     footer:
-      message.role === 'assistant' && message.references?.length
-        ? `引用：${message.references.map((item) => item.name).join('、')}`
+      message.role === "assistant" && message.references?.length
+        ? `引用：${message.references.map((item) => item.name).join("、")}`
         : undefined,
     typing:
-      message.role === 'assistant' && index === store.messages.length - 1 && store.loading
+      message.role === "assistant" &&
+      index === store.messages.length - 1 &&
+      store.loading
         ? { step: 2, interval: 24 }
-        : false
-  }))
-)
+        : false,
+  })),
+);
 
 onMounted(() => {
-  store.loadBaseData()
-})
+  store.loadBaseData();
+});
 
 onBeforeUnmount(() => {
-  stopVoice()
-})
+  stopVoice();
+});
 
 watch(
-  () => [store.messages.length, store.messages[store.messages.length - 1]?.text, store.loading],
+  () => [
+    store.messages.length,
+    store.messages[store.messages.length - 1]?.text,
+    store.loading,
+  ],
   () => nextTick(scrollToBottom),
-  { deep: true }
-)
+  { deep: true },
+);
 
 watch(
   () => store.chatExpanded,
   () => {
-    isExpanded.value = true
-    isMinimized.value = false
-    nextTick(scrollToBottom)
-  }
-)
+    isExpanded.value = true;
+    isMinimized.value = false;
+    nextTick(scrollToBottom);
+  },
+);
 
 function submit(text = input.value) {
-  const value = text.trim()
-  if ((!value && !selectedImages.value.length) || store.loading) return
-  input.value = ''
-  interimText.value = ''
-  const images = [...selectedImages.value]
-  selectedImages.value = []
-  isExpanded.value = true
-  isMinimized.value = false
-  void store.ask(value, images)
-  nextTick(scrollToBottom)
+  const value = text.trim();
+  if ((!value && !selectedImages.value.length) || store.loading) return;
+  input.value = "";
+  interimText.value = "";
+  const images = [...selectedImages.value];
+  selectedImages.value = [];
+  isExpanded.value = true;
+  isMinimized.value = false;
+  void store.ask(value, images);
+  nextTick(scrollToBottom);
 }
 
 function scrollToBottom() {
   if (chatBody.value) {
-    chatBody.value.scrollTop = chatBody.value.scrollHeight
+    chatBody.value.scrollTop = chatBody.value.scrollHeight;
   }
 }
 
 function createRecognition(isContinuous: boolean) {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    recognitionState.value = 'unsupported'
-    return null
+    recognitionState.value = "unsupported";
+    return null;
   }
 
-  const instance = new SpeechRecognition()
-  instance.lang = 'zh-CN'
-  instance.continuous = isContinuous
-  instance.interimResults = isContinuous
-  recognitionState.value = 'listening'
+  const instance = new SpeechRecognition();
+  instance.lang = "zh-CN";
+  instance.continuous = isContinuous;
+  instance.interimResults = isContinuous;
+  recognitionState.value = "listening";
 
   instance.onresult = (event: SpeechRecognitionEvent) => {
-    let finalText = ''
-    let currentInterim = ''
+    let finalText = "";
+    let currentInterim = "";
     for (let index = 0; index < event.results.length; index += 1) {
-      const result = event.results[index]
-      const text = result?.[0]?.transcript?.trim() || ''
-      if (!text) continue
-      if (result.isFinal) finalText += text
-      else currentInterim += text
+      const result = event.results[index];
+      const text = result?.[0]?.transcript?.trim() || "";
+      if (!text) continue;
+      if (result.isFinal) finalText += text;
+      else currentInterim += text;
     }
 
-    interimText.value = currentInterim
-    if (currentInterim) input.value = currentInterim
+    interimText.value = currentInterim;
+    if (currentInterim) input.value = currentInterim;
     if (finalText) {
-      input.value = finalText
-      submit(finalText)
+      input.value = finalText;
+      submit(finalText);
     }
-  }
+  };
 
   instance.onerror = () => {
-    if (!continuousVoice.value) recognitionState.value = 'idle'
-  }
+    if (!continuousVoice.value) recognitionState.value = "idle";
+  };
 
   instance.onend = () => {
-    recognitionState.value = 'idle'
+    recognitionState.value = "idle";
     if (continuousVoice.value) {
       window.setTimeout(() => {
-        if (continuousVoice.value && !store.loading) startVoice(true)
-      }, 280)
+        if (continuousVoice.value && !store.loading) startVoice(true);
+      }, 280);
     }
-  }
+  };
 
-  return instance
+  return instance;
 }
 
 function startVoice(isContinuous = false) {
-  stopVoice()
-  continuousVoice.value = isContinuous
-  recognition = createRecognition(isContinuous)
-  recognition?.start()
+  stopVoice();
+  continuousVoice.value = isContinuous;
+  recognition = createRecognition(isContinuous);
+  recognition?.start();
 }
 
 function stopVoice() {
-  continuousVoice.value = false
-  interimText.value = ''
-  recognitionState.value = 'idle'
-  recognition?.abort()
-  recognition = null
+  continuousVoice.value = false;
+  interimText.value = "";
+  recognitionState.value = "idle";
+  recognition?.abort();
+  recognition = null;
 }
 
 function toggleContinuousVoice() {
   if (continuousVoice.value) {
-    stopVoice()
-    return
+    stopVoice();
+    return;
   }
-  startVoice(true)
+  startVoice(true);
 }
 
 function triggerImageInput() {
-  fileInput.value?.click()
+  fileInput.value?.click();
 }
 
 function handleImageChange(event: Event) {
-  const inputEl = event.target as HTMLInputElement
-  const files = Array.from(inputEl.files || []).slice(0, 3)
-  if (!files.length) return
+  const inputEl = event.target as HTMLInputElement;
+  const files = Array.from(inputEl.files || []).slice(0, 3);
+  if (!files.length) return;
   Promise.all(files.map(readImageFile)).then((items) => {
-    selectedImages.value = [...selectedImages.value, ...items].slice(0, 3)
-  })
-  inputEl.value = ''
+    selectedImages.value = [...selectedImages.value, ...items].slice(0, 3);
+  });
+  inputEl.value = "";
 }
 
 function readImageFile(file: File) {
   return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('图片读取失败'))
-    reader.readAsDataURL(file)
-  })
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("图片读取失败"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function removeImage(index: number) {
-  selectedImages.value = selectedImages.value.filter((_, itemIndex) => itemIndex !== index)
+  selectedImages.value = selectedImages.value.filter(
+    (_, itemIndex) => itemIndex !== index,
+  );
 }
 
 function toggleExpand() {
-  isExpanded.value = !isExpanded.value
+  isExpanded.value = !isExpanded.value;
   if (isExpanded.value) {
-    isMinimized.value = false
-    nextTick(scrollToBottom)
+    isMinimized.value = false;
+    nextTick(scrollToBottom);
   }
 }
 
 function toggleMinimize() {
-  isMinimized.value = !isMinimized.value
-  if (isMinimized.value) isExpanded.value = false
+  isMinimized.value = !isMinimized.value;
+  if (isMinimized.value) isExpanded.value = false;
 }
 </script>
 
 <template>
   <XProvider>
-    <div v-if="!isHomePage" class="floating-assistant" :class="{ expanded: isExpanded, minimized: isMinimized }">
-      <button v-if="isMinimized" class="agent-orb" type="button" @click="toggleMinimize">
+    <div
+      v-if="!isHomePage"
+      class="floating-assistant"
+      :class="{ expanded: isExpanded, minimized: isMinimized }"
+    >
+      <button
+        v-if="isMinimized"
+        class="agent-orb"
+        type="button"
+        @click="toggleMinimize"
+      >
         <Bot :size="24" />
       </button>
 
       <template v-else>
-        <button class="avatar-float" type="button" :title="isExpanded ? '收起对话' : '展开对话'" @click="toggleExpand">
+        <button
+          class="avatar-float"
+          type="button"
+          :title="isExpanded ? '收起对话' : '展开对话'"
+          @click="toggleExpand"
+        >
           <AvatarGuide
             :speaking="store.speaking || store.loading"
             :emotion="store.currentEmotion"
             :outfit="store.avatarConfig.outfit"
+            :outfit-image="store.currentOutfitImage"
+            :outfit-model-url="store.currentOutfitModelUrl"
             :live2d="store.avatarConfig.live2d"
           />
         </button>
@@ -235,52 +280,93 @@ function toggleMinimize() {
               <Badge status="success" />
               <div class="agent-title">
                 <strong>Hiyori</strong>
-                <span>{{ store.loading ? '正在思考' : '在线' }}</span>
+                <span>{{ store.loading ? "正在思考" : "在线" }}</span>
               </div>
             </a-flex>
           </template>
 
           <template #extra>
             <a-flex gap="small">
-              <a-button shape="circle" type="text" :title="isExpanded ? '收起对话' : '展开对话'" @click="toggleExpand">
+              <a-button
+                shape="circle"
+                type="text"
+                :title="isExpanded ? '收起对话' : '展开对话'"
+                @click="toggleExpand"
+              >
                 <Minimize2 v-if="isExpanded" :size="16" />
                 <Maximize2 v-else :size="16" />
               </a-button>
-              <a-button shape="circle" type="text" title="最小化" @click="toggleMinimize">
+              <a-button
+                shape="circle"
+                type="text"
+                title="最小化"
+                @click="toggleMinimize"
+              >
                 <ChevronDown :size="16" />
               </a-button>
-              <a-button shape="circle" type="text" title="关闭" @click="toggleMinimize">
+              <a-button
+                shape="circle"
+                type="text"
+                title="关闭"
+                @click="toggleMinimize"
+              >
                 <X :size="16" />
               </a-button>
             </a-flex>
           </template>
 
           <div v-show="isExpanded" ref="chatBody" class="agent-chat-body">
-            <BubbleList class="agent-bubbles" :items="bubbleItems" :roles="bubbleRoles" :auto-scroll="true" />
+            <BubbleList
+              class="agent-bubbles"
+              :items="bubbleItems"
+              :roles="bubbleRoles"
+              :auto-scroll="true"
+            />
           </div>
 
           <div v-if="selectedImages.length" class="image-tray">
-            <button v-for="(image, index) in selectedImages" :key="image" type="button" @click="removeImage(index)">
+            <button
+              v-for="(image, index) in selectedImages"
+              :key="image"
+              type="button"
+              @click="removeImage(index)"
+            >
               <img :src="image" alt="待发送图片" />
               <span>移除</span>
             </button>
           </div>
 
           <p v-if="continuousVoice || interimText" class="voice-status">
-            {{ interimText || '长时间语音对话中，说完一句会自动提问' }}
+            {{ interimText || "长时间语音对话中，说完一句会自动提问" }}
           </p>
 
           <Sender
             v-model:value="input"
             class="agent-sender"
             :loading="store.loading"
-            :placeholder="continuousVoice ? '正在持续聆听...' : '说点什么，或上传图片提问...'"
+            :placeholder="
+              continuousVoice
+                ? '正在持续聆听...'
+                : '说点什么，或上传图片提问...'
+            "
             submit-type="enter"
             @submit="submit"
           >
             <template #prefix>
-              <input ref="fileInput" class="hidden-file" type="file" accept="image/*" multiple @change="handleImageChange" />
-              <a-button shape="circle" type="text" title="图片输入" @click="triggerImageInput">
+              <input
+                ref="fileInput"
+                class="hidden-file"
+                type="file"
+                accept="image/*"
+                multiple
+                @change="handleImageChange"
+              />
+              <a-button
+                shape="circle"
+                type="text"
+                title="图片输入"
+                @click="triggerImageInput"
+              >
                 <ImagePlus :size="18" />
               </a-button>
               <a-button
@@ -296,7 +382,9 @@ function toggleMinimize() {
                 shape="circle"
                 type="text"
                 :class="{ listening: continuousVoice }"
-                :title="continuousVoice ? '停止长时间语音对话' : '长时间语音对话'"
+                :title="
+                  continuousVoice ? '停止长时间语音对话' : '长时间语音对话'
+                "
                 @click="toggleContinuousVoice"
               >
                 <Square v-if="continuousVoice" :size="15" />
@@ -419,7 +507,11 @@ function toggleMinimize() {
   min-height: 52px;
   border: 0;
   color: #fff;
-  background: linear-gradient(105deg, var(--primary-600) 0%, var(--accent-mint) 100%);
+  background: linear-gradient(
+    105deg,
+    var(--primary-600) 0%,
+    var(--accent-mint) 100%
+  );
 }
 
 .agent-panel :deep(.ant-card-head-title),

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   Bot,
   Camera,
@@ -11,226 +11,304 @@ import {
   Route,
   Send,
   Upload,
-} from 'lucide-vue-next'
-import { BubbleList, Sender } from 'ant-design-x-vue'
-import AvatarGuide from '../../components/AvatarGuide.vue'
-import { useGuideStore } from '../../stores/useGuideStore'
+} from "lucide-vue-next";
+import { BubbleList, Sender } from "ant-design-x-vue";
+import AvatarGuide from "../../components/AvatarGuide.vue";
+import { useGuideStore } from "../../stores/useGuideStore";
 
-type Mode = 'guide' | 'qa'
+type Mode = "guide" | "qa";
 
 type GuideRoute = {
-  id: string
-  title: string
-  interest: string
-  duration: string
-  image: string
-  summary: string
-  stops: string[]
-  tone: string
-}
+  id: string;
+  title: string;
+  interest: string;
+  duration: string;
+  image: string;
+  summary: string;
+  stops: string[];
+  tone: string;
+};
 
 type UploadPreview = {
-  name: string
-  url: string
-}
+  name: string;
+  url: string;
+};
 
-const router = useRouter()
-const route = useRoute()
-const store = useGuideStore()
-const input = ref('')
-const chatBody = ref<HTMLElement | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
-const activeRouteId = ref('family')
-const activeStopIndex = ref(0)
-const activeMode = ref<Mode>(route.query.mode === 'qa' ? 'qa' : 'guide')
-const uploadPreviews = ref<UploadPreview[]>([])
+const router = useRouter();
+const route = useRoute();
+const store = useGuideStore();
+const input = ref("");
+const chatBody = ref<HTMLElement | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const activeRouteId = ref("family");
+const activeStopIndex = ref(0);
+const routeConfirmed = ref(false);
+const activeMode = ref<Mode>(route.query.mode === "qa" ? "qa" : "guide");
+const uploadPreviews = ref<UploadPreview[]>([]);
 
 const guideRoutes: GuideRoute[] = [
   {
-    id: 'family',
-    title: '亲子家庭轻松线',
-    interest: '亲子休闲',
-    duration: '4 小时轻松游',
-    image: '/images/guide-demo/route-family.png',
-    summary: '数字人把知识点拆成互动任务，按路线依次讲解，也能随时回答孩子和家长的问题。',
-    stops: ['南门入园 / 游客中心', '九龙灌浴', '佛手广场', '百子戏弥勒', '梵宫', '五印坛城', '出口'],
-    tone: '轻松、互动、适合亲子'
+    id: "family",
+    title: "亲子家庭轻松线",
+    interest: "亲子休闲",
+    duration: "4 小时轻松游",
+    image: "/images/guide-demo/route-family.png",
+    summary:
+      "数字人把知识点拆成互动任务，按路线依次讲解，也能随时回答孩子和家长的问题。",
+    stops: [
+      "南门入园 / 游客中心",
+      "九龙灌浴",
+      "佛手广场",
+      "百子戏弥勒",
+      "梵宫",
+      "五印坛城",
+      "出口",
+    ],
+    tone: "轻松、互动、适合亲子",
   },
   {
-    id: 'nature',
-    title: '自然风光全景线',
-    interest: '自然风光',
-    duration: '5 小时全景游',
-    image: '/images/guide-demo/route-nature.png',
-    summary: '围绕太湖、山林、观景平台和慢游动线，数字人以取景建议和文化点穿插讲解。',
-    stops: ['南门入园 / 游客中心', '佛足坛', '九龙灌浴', '菩提大道', '灵山大佛', '曼飞龙塔', '灵山精舍', '梵宫广场', '出口'],
-    tone: '舒缓、观景、适合拍照'
+    id: "nature",
+    title: "自然风光全景线",
+    interest: "自然风光",
+    duration: "5 小时全景游",
+    image: "/images/guide-demo/route-nature.png",
+    summary:
+      "围绕太湖、山林、观景平台和慢游动线，数字人以取景建议和文化点穿插讲解。",
+    stops: [
+      "南门入园 / 游客中心",
+      "佛足坛",
+      "九龙灌浴",
+      "菩提大道",
+      "灵山大佛",
+      "曼飞龙塔",
+      "灵山精舍",
+      "梵宫广场",
+      "出口",
+    ],
+    tone: "舒缓、观景、适合拍照",
   },
   {
-    id: 'history',
-    title: '历史文化深度线',
-    interest: '历史文化',
-    duration: '6 小时深度游',
-    image: '/images/guide-demo/route-history.png',
-    summary: '从入口缘起讲到祥符禅寺、灵山大佛和五印坛城，适合需要深度文化解说的游客。',
-    stops: ['南门入园 / 游客中心', '灵山大照壁', '胜境广场', '佛手广场', '祥符禅寺', '杏坛广场', '佛前广场', '灵山大佛', '灵山梵宫', '五印坛城', '三圣殿', '出口'],
-    tone: '沉浸、文化、适合深度游'
-  }
-]
+    id: "history",
+    title: "历史文化深度线",
+    interest: "历史文化",
+    duration: "6 小时深度游",
+    image: "/images/guide-demo/route-history.png",
+    summary:
+      "从入口缘起讲到祥符禅寺、灵山大佛和五印坛城，适合需要深度文化解说的游客。",
+    stops: [
+      "南门入园 / 游客中心",
+      "灵山大照壁",
+      "胜境广场",
+      "佛手广场",
+      "祥符禅寺",
+      "杏坛广场",
+      "佛前广场",
+      "灵山大佛",
+      "灵山梵宫",
+      "五印坛城",
+      "三圣殿",
+      "出口",
+    ],
+    tone: "沉浸、文化、适合深度游",
+  },
+];
 
 const qaCards = [
-  { title: '总览图识别', desc: '识别当前位置、服务点和推荐动线', image: '/images/guide-demo/overview-map.png' },
-  { title: '景点图问答', desc: '围绕建筑、佛教寓意和最佳体验提问', image: '/images/guide-demo/lingshan-buddha-poster.png' },
-  { title: '亲子互动解释', desc: '把文化内容改写成儿童能听懂的讲法', image: '/images/guide-demo/baizi-mile.png' },
-  { title: '拍照点建议', desc: '根据上传图片给出角度和游览建议', image: '/images/guide-demo/foshou-square.png' }
-]
+  {
+    title: "总览图识别",
+    desc: "识别当前位置、服务点和推荐动线",
+    image: "/images/guide-demo/overview-map.png",
+  },
+  {
+    title: "景点图问答",
+    desc: "围绕建筑最佳体验提问",
+    image: "/images/guide-demo/lingshan-buddha-poster.png",
+  },
+  {
+    title: "亲子互动解释",
+    desc: "改写成儿童能听懂的讲法",
+    image: "/images/guide-demo/baizi-mile.png",
+  },
+  {
+    title: "拍照点建议",
+    desc: "根据上传图片给出角度和游览建议",
+    image: "/images/guide-demo/foshou-square.png",
+  },
+];
 
 const scenicGallery = [
-  { name: '灵山大佛', image: '/images/guide-demo/lingshan-buddha-poster.png' },
-  { name: '灵山梵宫', image: '/images/guide-demo/lingshan-fangong.png' },
-  { name: '九龙灌浴', image: '/images/guide-demo/jiulong-bath-poster.png' },
-  { name: '五印坛城', image: '/images/guide-demo/wuyin-tancheng.png' },
-  { name: '祥符禅寺', image: '/images/guide-demo/xiangfu-temple.png' },
-  { name: '曼飞龙塔', image: '/images/guide-demo/manfeilong-tower.png' }
-]
+  { name: "灵山大佛", image: "/images/guide-demo/lingshan-buddha-poster.png" },
+  { name: "灵山梵宫", image: "/images/guide-demo/lingshan-fangong.png" },
+  { name: "九龙灌浴", image: "/images/guide-demo/jiulong-bath-poster.png" },
+  { name: "五印坛城", image: "/images/guide-demo/wuyin-tancheng.png" },
+  { name: "祥符禅寺", image: "/images/guide-demo/xiangfu-temple.png" },
+  { name: "曼飞龙塔", image: "/images/guide-demo/manfeilong-tower.png" },
+];
 
 const modeTabs = [
-  { key: 'guide' as const, label: '导员模式', icon: Bot },
-  { key: 'qa' as const, label: '问答模式', icon: MessageCircle }
-]
+  { key: "guide" as const, label: "导游模式", icon: Bot },
+  { key: "qa" as const, label: "问答模式", icon: MessageCircle },
+];
 
-const activeRoute = computed(() => guideRoutes.find(item => item.id === activeRouteId.value) || guideRoutes[0])
-const activeStop = computed(() => activeRoute.value.stops[activeStopIndex.value] || activeRoute.value.stops[0])
+const activeRoute = computed(
+  () =>
+    guideRoutes.find((item) => item.id === activeRouteId.value) ||
+    guideRoutes[0],
+);
+const activeStop = computed(
+  () =>
+    activeRoute.value.stops[activeStopIndex.value] ||
+    activeRoute.value.stops[0],
+);
 
 const bubbleRoles = {
   assistant: {
-    placement: 'start' as const,
-    variant: 'shadow' as const,
+    placement: "start" as const,
+    variant: "shadow" as const,
     avatar: {
-      style: { background: '#eaf7ef', color: '#25754f' },
-      icon: '导'
-    }
+      style: { background: "#eaf7ef", color: "#25754f" },
+      icon: "导",
+    },
   },
   user: {
-    placement: 'end' as const,
-    variant: 'filled' as const,
+    placement: "end" as const,
+    variant: "filled" as const,
     avatar: {
-      style: { background: '#328f62', color: '#fff' },
-      icon: '我'
-    }
-  }
-}
+      style: { background: "#328f62", color: "#fff" },
+      icon: "我",
+    },
+  },
+};
 
 const bubbleItems = computed(() =>
   store.messages.map((message, index) => ({
     key: index,
     role: message.role,
-    content: message.text || (message.role === 'assistant' && store.loading ? '正在思考...' : ''),
-    loading: message.role === 'assistant' && !message.text && store.loading,
+    content:
+      message.text ||
+      (message.role === "assistant" && store.loading ? "正在思考..." : ""),
+    loading: message.role === "assistant" && !message.text && store.loading,
     typing:
-      message.role === 'assistant' && index === store.messages.length - 1 && store.loading
+      message.role === "assistant" &&
+      index === store.messages.length - 1 &&
+      store.loading
         ? { step: 2, interval: 24 }
-        : false
-  }))
-)
+        : false,
+  })),
+);
 
 const statusText = computed(() => {
-  if (store.loading) return '正在理解游客意图'
-  if (store.speaking) return '正在语音讲解'
-  return activeMode.value === 'guide' ? '导员待命 · 可带路线也可答疑' : '多模态问答待命'
-})
+  if (store.loading) return "正在理解游客意图";
+  if (store.speaking) return "正在语音讲解";
+  return activeMode.value === "guide"
+    ? "导游待命 · 可带路线也可答疑"
+    : "多模态问答待命";
+});
 
 onMounted(async () => {
-  await store.loadBaseData()
-  await store.updateInterest(activeRoute.value.interest)
-})
+  await store.loadBaseData();
+  await store.updateInterest(activeRoute.value.interest);
+});
 
 watch(
   () => route.query.mode,
   (mode) => {
-    activeMode.value = mode === 'qa' ? 'qa' : 'guide'
-  }
-)
+    activeMode.value = mode === "qa" ? "qa" : "guide";
+  },
+);
 
 async function switchMode(mode: Mode) {
-  activeMode.value = mode
-  await router.replace({ path: '/home', query: { mode } })
+  activeMode.value = mode;
+  await router.replace({ path: "/home", query: { mode } });
 }
 
 async function selectGuideRoute(routeId: string) {
-  activeRouteId.value = routeId
-  activeStopIndex.value = 0
-  await store.updateInterest(activeRoute.value.interest)
+  activeRouteId.value = routeId;
+  activeStopIndex.value = 0;
+  routeConfirmed.value = true;
+  await store.updateInterest(activeRoute.value.interest);
+}
+
+function backToRouteSelection() {
+  routeConfirmed.value = false;
 }
 
 async function startGuiding() {
-  activeStopIndex.value = 0
+  activeStopIndex.value = 0;
   await submit(
-    `请进入导员模式，判断我适合“${activeRoute.value.title}”，并从“${activeStop.value}”开始做第一段现场讲解。讲解风格：${activeRoute.value.tone}。`
-  )
+    `请进入导游模式，判断我适合”${activeRoute.value.title}”，并从”${activeStop.value}”开始做第一段现场讲解。讲解风格：${activeRoute.value.tone}。`,
+  );
 }
 
 async function continueGuiding() {
-  activeStopIndex.value = Math.min(activeStopIndex.value + 1, activeRoute.value.stops.length - 1)
-  await submit(`请继续导员模式，现在讲解“${activeStop.value}”，并自然衔接下一站。`)
+  activeStopIndex.value = Math.min(
+    activeStopIndex.value + 1,
+    activeRoute.value.stops.length - 1,
+  );
+  await submit(
+    `请继续导游模式，现在讲解”${activeStop.value}”，并自然衔接下一站。`,
+  );
 }
 
 async function askAboutStop() {
-  const value = input.value.trim() || `游客在“${activeStop.value}”提问：这里最值得听的文化故事是什么？`
-  await submit(`导员模式游客提问，当前位置是“${activeStop.value}”：${value}`)
+  const value =
+    input.value.trim() ||
+    `游客在“${activeStop.value}”提问：这里最值得听的文化故事是什么？`;
+  await submit(`导游模式游客提问，当前位置是”${activeStop.value}”：${value}`);
 }
 
 async function askWithPreset(text: string) {
-  input.value = text
-  await submit()
+  input.value = text;
+  await submit();
 }
 
 async function submit(text = input.value) {
-  const value = text.trim()
-  const imageUrls = uploadPreviews.value.map(item => item.url)
-  if ((!value && !imageUrls.length) || store.loading) return
+  const value = text.trim();
+  const imageUrls = uploadPreviews.value.map((item) => item.url);
+  if ((!value && !imageUrls.length) || store.loading) return;
 
   const modePrefix =
-    activeMode.value === 'guide'
-      ? `导员模式，当前线路“${activeRoute.value.title}”，当前站点“${activeStop.value}”。`
-      : '问答模式，请结合游客上传的图片、语音转写或文字问题做多模态回答。'
+    activeMode.value === "guide"
+      ? `导游模式，当前线路”${activeRoute.value.title}”，当前站点”${activeStop.value}”。`
+      : "问答模式，请结合游客上传的图片、语音转写或文字问题做多模态回答。";
 
-  input.value = ''
-  uploadPreviews.value = []
-  await store.ask(`${modePrefix}${value}`, imageUrls)
-  await nextTick()
-  scrollToBottom()
+  input.value = "";
+  uploadPreviews.value = [];
+  await store.ask(`${modePrefix}${value}`, imageUrls);
+  await nextTick();
+  scrollToBottom();
 }
 
 function scrollToBottom() {
   if (chatBody.value) {
-    chatBody.value.scrollTop = chatBody.value.scrollHeight
+    chatBody.value.scrollTop = chatBody.value.scrollHeight;
   }
 }
 
 function openUpload() {
-  fileInput.value?.click()
+  fileInput.value?.click();
 }
 
 async function handleUpload(event: Event) {
-  const target = event.target as HTMLInputElement
-  const files = Array.from(target.files || [])
+  const target = event.target as HTMLInputElement;
+  const files = Array.from(target.files || []);
   const previews = await Promise.all(
     files.map(
-      file =>
+      (file) =>
         new Promise<UploadPreview>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve({ name: file.name, url: String(reader.result || '') })
-          reader.readAsDataURL(file)
-        })
-    )
-  )
-  uploadPreviews.value = [...uploadPreviews.value, ...previews].slice(0, 4)
-  target.value = ''
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve({ name: file.name, url: String(reader.result || "") });
+          reader.readAsDataURL(file);
+        }),
+    ),
+  );
+  uploadPreviews.value = [...uploadPreviews.value, ...previews].slice(0, 4);
+  target.value = "";
 }
 
 function removeUpload(index: number) {
-  uploadPreviews.value.splice(index, 1)
+  uploadPreviews.value.splice(index, 1);
 }
 </script>
 
@@ -256,6 +334,8 @@ function removeUpload(index: number) {
             :speaking="store.speaking || store.loading"
             :emotion="store.currentEmotion"
             :outfit="store.avatarConfig.outfit"
+            :outfit-image="store.currentOutfitImage"
+            :outfit-model-url="store.currentOutfitModelUrl"
             :live2d="store.avatarConfig.live2d"
           />
         </div>
@@ -284,76 +364,103 @@ function removeUpload(index: number) {
 
       <main class="mode-panel">
         <section v-if="activeMode === 'guide'" class="guide-mode">
-          <div class="panel-heading">
-            <div>
-              <p>Digital Human Tour</p>
-              <h1>导员模式</h1>
+          <!-- 未选择路线：展示三条路线供选择 -->
+          <template v-if="!routeConfirmed">
+            <div class="panel-heading">
+              <div>
+                <p>Digital Human Tour</p>
+                <h1>导游模式</h1>
+              </div>
             </div>
-            <button class="compact-action" @click="startGuiding">
-              <Route :size="18" />
-              开始带游
-            </button>
-          </div>
+            <p class="route-prompt">请选择一条游览路线，数字人将带您依次游览</p>
+            <div class="route-chooser route-chooser--large">
+              <button
+                v-for="item in guideRoutes"
+                :key="item.id"
+                class="route-option route-option--large"
+                @click="selectGuideRoute(item.id)"
+              >
+                <img :src="item.image" :alt="item.title" />
+                <div class="route-option-info">
+                  <span>{{ item.duration }}</span>
+                  <strong>{{ item.title }}</strong>
+                  <small>{{ item.interest }} · {{ item.tone }}</small>
+                </div>
+              </button>
+            </div>
+          </template>
 
-          <div class="route-chooser">
-            <button
-              v-for="item in guideRoutes"
-              :key="item.id"
-              class="route-option"
-              :class="{ active: item.id === activeRouteId }"
-              @click="selectGuideRoute(item.id)"
-            >
-              <img :src="item.image" :alt="item.title" />
-              <span>{{ item.duration }}</span>
-              <strong>{{ item.title }}</strong>
-            </button>
-          </div>
-
-          <div class="guide-grid">
-            <article class="route-map">
-              <img :src="activeRoute.image" :alt="activeRoute.title" />
-              <div class="route-map-label">
-                <MapPinned :size="18" />
-                <span>{{ activeRoute.title }}</span>
+          <!-- 已选择路线：展示路线详情 -->
+          <template v-else>
+            <div class="panel-heading">
+              <div>
+                <p>Digital Human Tour</p>
+                <h1>导游模式</h1>
               </div>
-            </article>
-
-            <article class="route-script">
-              <div class="route-summary">
-                <span>{{ activeRoute.duration }}</span>
-                <h2>{{ activeRoute.title }}</h2>
-                <p>{{ activeRoute.summary }}</p>
-              </div>
-
-              <div class="stop-strip" aria-label="线路站点">
+              <div class="panel-heading-actions">
                 <button
-                  v-for="(stop, index) in activeRoute.stops"
-                  :key="`${activeRoute.id}-${stop}`"
-                  class="stop-pill"
-                  :class="{ current: index === activeStopIndex, passed: index < activeStopIndex }"
-                  @click="activeStopIndex = index"
+                  class="compact-action secondary"
+                  @click="backToRouteSelection"
                 >
-                  <span>{{ index + 1 }}</span>
-                  {{ stop }}
-                </button>
-              </div>
-
-              <div class="guide-actions">
-                <button @click="startGuiding">
-                  <Bot :size="18" />
-                  从当前线路开讲
-                </button>
-                <button @click="continueGuiding">
                   <Route :size="18" />
-                  讲下一站
+                  换路线
                 </button>
-                <button @click="askAboutStop">
-                  <MessageCircle :size="18" />
-                  回答游客提问
+                <button class="compact-action" @click="startGuiding">
+                  <Route :size="18" />
+                  开始带游
                 </button>
               </div>
-            </article>
-          </div>
+            </div>
+
+            <div class="guide-grid">
+              <article class="route-map">
+                <img :src="activeRoute.image" :alt="activeRoute.title" />
+                <div class="route-map-label">
+                  <MapPinned :size="18" />
+                  <span>{{ activeRoute.title }}</span>
+                </div>
+              </article>
+
+              <article class="route-script">
+                <div class="route-summary">
+                  <span>{{ activeRoute.duration }}</span>
+                  <h2>{{ activeRoute.title }}</h2>
+                  <p>{{ activeRoute.summary }}</p>
+                </div>
+
+                <div class="stop-strip" aria-label="线路站点">
+                  <button
+                    v-for="(stop, index) in activeRoute.stops"
+                    :key="`${activeRoute.id}-${stop}`"
+                    class="stop-pill"
+                    :class="{
+                      current: index === activeStopIndex,
+                      passed: index < activeStopIndex,
+                    }"
+                    @click="activeStopIndex = index"
+                  >
+                    <span>{{ index + 1 }}</span>
+                    {{ stop }}
+                  </button>
+                </div>
+
+                <div class="guide-actions">
+                  <button @click="startGuiding">
+                    <Bot :size="18" />
+                    从当前线路开讲
+                  </button>
+                  <button @click="continueGuiding">
+                    <Route :size="18" />
+                    讲下一站
+                  </button>
+                  <button @click="askAboutStop">
+                    <MessageCircle :size="18" />
+                    回答游客提问
+                  </button>
+                </div>
+              </article>
+            </div>
+          </template>
         </section>
 
         <section v-else class="qa-mode">
@@ -373,7 +480,9 @@ function removeUpload(index: number) {
               v-for="card in qaCards"
               :key="card.title"
               class="qa-card"
-              @click="askWithPreset(`请围绕“${card.title}”回答游客问题：${card.desc}`)"
+              @click="
+                askWithPreset(`请围绕“${card.title}”回答游客问题：${card.desc}`)
+              "
             >
               <img :src="card.image" :alt="card.title" />
               <span>{{ card.title }}</span>
@@ -386,7 +495,11 @@ function removeUpload(index: number) {
               v-for="item in scenicGallery"
               :key="item.name"
               class="gallery-item"
-              @click="askWithPreset(`请介绍${item.name}，并告诉我游客到现场最应该注意什么。`)"
+              @click="
+                askWithPreset(
+                  `请介绍${item.name}，并告诉我游客到现场最应该注意什么。`,
+                )
+              "
             >
               <img :src="item.image" :alt="item.name" />
               <span>{{ item.name }}</span>
@@ -430,14 +543,20 @@ function removeUpload(index: number) {
             <Sender
               v-model:value="input"
               :loading="store.loading"
-              :placeholder="activeMode === 'guide' ? '告诉数字人你的同行人、兴趣或现场问题...' : '输入问题，或上传图片后直接发送...'"
+              :placeholder="
+                activeMode === 'guide'
+                  ? '告诉数字人你的同行人、兴趣或现场问题...'
+                  : '输入问题，或上传图片后直接发送...'
+              "
               submit-type="enter"
               @submit="submit"
             >
               <template #suffix>
                 <button
                   class="send-btn"
-                  :disabled="(!input.trim() && !uploadPreviews.length) || store.loading"
+                  :disabled="
+                    (!input.trim() && !uploadPreviews.length) || store.loading
+                  "
                   @click="submit()"
                 >
                   <Send :size="18" />
@@ -447,13 +566,27 @@ function removeUpload(index: number) {
           </div>
 
           <div class="quick-prompts">
-            <button @click="askWithPreset('我带老人和孩子一起游览，请自动选择一条轻松线路。')">
+            <button
+              @click="
+                askWithPreset(
+                  '我带老人和孩子一起游览，请自动选择一条轻松线路。',
+                )
+              "
+            >
               自动选线
             </button>
-            <button @click="askWithPreset('请用 1 分钟讲解当前景点，并留一个互动问题。')">
+            <button
+              @click="
+                askWithPreset('请用 1 分钟讲解当前景点，并留一个互动问题。')
+              "
+            >
               1 分钟讲解
             </button>
-            <button @click="askWithPreset('我上传了图片，请识别这是哪里，并说明典故。')">
+            <button
+              @click="
+                askWithPreset('我上传了图片，请识别这是哪里，并说明典故。')
+              "
+            >
               看图讲解
             </button>
           </div>
@@ -471,7 +604,7 @@ function removeUpload(index: number) {
 
 .guide-console {
   display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
   gap: 18px;
   max-width: 1420px;
   margin: 0 auto;
@@ -524,7 +657,10 @@ function removeUpload(index: number) {
   color: var(--text-secondary);
   font-weight: 700;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .mode-button.active,
@@ -536,16 +672,20 @@ function removeUpload(index: number) {
 }
 
 .avatar-frame {
-  min-height: 430px;
+  min-height: 520px;
   overflow: hidden;
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(234, 247, 239, 0.86), rgba(246, 250, 247, 0.44)),
-    url('/images/guide-demo/lingshan-jingshe.png') center / cover;
+    linear-gradient(
+      180deg,
+      rgba(234, 247, 239, 0.86),
+      rgba(246, 250, 247, 0.44)
+    ),
+    url("/images/guide-demo/lingshan-jingshe.png") center / cover;
 }
 
 .avatar-frame :deep(.avatar-stage) {
-  min-height: 430px;
+  min-height: 520px;
 }
 
 .avatar-caption {
@@ -609,6 +749,11 @@ function removeUpload(index: number) {
   gap: 12px;
 }
 
+.panel-heading-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .panel-heading p {
   margin: 0 0 4px;
   color: var(--primary-600);
@@ -629,10 +774,28 @@ function removeUpload(index: number) {
   padding: 0 14px;
 }
 
+.compact-action.secondary {
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+}
+
+.route-prompt {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
 .route-chooser {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.route-chooser--large {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .route-option,
@@ -645,7 +808,10 @@ function removeUpload(index: number) {
   background: var(--surface-raised);
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .route-option {
@@ -670,7 +836,7 @@ function removeUpload(index: number) {
 .route-map::after,
 .qa-card::after,
 .gallery-item::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 34%, rgba(20, 42, 31, 0.76));
@@ -697,7 +863,46 @@ function removeUpload(index: number) {
 
 .route-option.active {
   border-color: rgba(50, 143, 98, 0.7);
-  box-shadow: 0 0 0 3px rgba(50, 143, 98, 0.14), var(--shadow-md);
+  box-shadow:
+    0 0 0 3px rgba(50, 143, 98, 0.14),
+    var(--shadow-md);
+}
+
+.route-option--large {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.route-option--large img {
+  flex: 1;
+  object-fit: cover;
+}
+
+.route-option-info {
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  padding: 40px 16px 16px;
+  background: linear-gradient(180deg, transparent, rgba(20, 42, 31, 0.82));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.route-option-info span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.route-option-info strong {
+  font-size: 18px;
+}
+
+.route-option-info small {
+  font-size: 12px;
+  opacity: 0.75;
 }
 
 .guide-grid {
@@ -954,6 +1159,7 @@ function removeUpload(index: number) {
 }
 
 .route-option:hover,
+.route-option--large:hover,
 .qa-card:hover,
 .gallery-item:hover,
 .guide-actions button:hover,
@@ -985,7 +1191,7 @@ function removeUpload(index: number) {
 
   .avatar-frame,
   .avatar-frame :deep(.avatar-stage) {
-    min-height: 340px;
+    min-height: 400px;
   }
 
   .qa-grid,
