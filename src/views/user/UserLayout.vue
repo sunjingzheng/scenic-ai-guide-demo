@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { RouterView, useRouter, useRoute } from 'vue-router'
-import { Home, Map, Compass, MessageCircle, Route, User, Landmark } from 'lucide-vue-next'
+import { Bot, Landmark, MessageCircle } from 'lucide-vue-next'
 import FloatingAvatar from '../../components/FloatingAvatar.vue'
 import { useGuideStore } from '../../stores/useGuideStore'
 
@@ -11,27 +11,21 @@ const store = useGuideStore()
 const lastSpokenPath = ref('')
 
 const navItems = [
-  { path: '/home', icon: Home, label: '首页' },
-  { path: '/overview', icon: Map, label: '园区总览' },
-  { path: '/spots', icon: Compass, label: '景点探索' },
-  { path: '/routes', icon: Route, label: '路线推荐' },
-  { path: '/profile', icon: User, label: '个人中心' }
+  { mode: 'guide' as const, icon: Bot, label: '导员模式' },
+  { mode: 'qa' as const, icon: MessageCircle, label: '问答模式' }
 ]
 
-const mobileNavItems = [
-  { path: '/home', icon: Home, label: '首页' },
-  { path: '/overview', icon: Map, label: '总览' },
-  { path: '/routes', icon: Route, label: '路线' },
-  { path: '/profile', icon: User, label: '我的' }
-]
+function isActiveMode(mode: 'guide' | 'qa') {
+  return route.path === '/home' && (route.query.mode === mode || (!route.query.mode && mode === 'guide'))
+}
 
-function isActive(path: string) {
-  return route.path === path
+function goMode(mode: 'guide' | 'qa') {
+  void router.push({ path: '/home', query: { mode } })
 }
 
 const routeAnnouncements: Record<string, { text: string; audioUrl: string }> = {
   '/home': {
-    text: '您好，欢迎来到灵山胜境智慧导览。我是 Hiyori，您的 AI 数字人导游。您可以问我景点历史、游览路线、表演时间，也可以上传图片让我帮您识别讲解。',
+    text: '您好，欢迎来到灵山胜境智慧导览。我是 Hiyori，您的 AI 数字人导游。您可以进入导员模式让我自动选线并依次讲解，也可以进入问答模式上传图片做多模态问答。',
     audioUrl: '/audio/route-intros/home.wav'
   },
   '/overview': {
@@ -95,10 +89,10 @@ watch(
       <nav class="navbar-menu">
         <button
           v-for="item in navItems"
-          :key="item.path"
+          :key="item.mode"
           class="nav-item"
-          :class="{ active: isActive(item.path) }"
-          @click="router.push(item.path)"
+          :class="{ active: isActiveMode(item.mode) }"
+          @click="goMode(item.mode)"
         >
           <component :is="item.icon" :size="20" />
           <span>{{ item.label }}</span>
@@ -117,11 +111,11 @@ watch(
     <!-- 移动端底部导航栏 -->
     <nav class="bottom-nav">
       <button
-        v-for="item in mobileNavItems"
-        :key="item.path"
+        v-for="item in navItems"
+        :key="item.mode"
         class="bottom-nav-item"
-        :class="{ active: isActive(item.path) }"
-        @click="router.push(item.path)"
+        :class="{ active: isActiveMode(item.mode) }"
+        @click="goMode(item.mode)"
       >
         <component :is="item.icon" :size="22" />
         <span>{{ item.label }}</span>
